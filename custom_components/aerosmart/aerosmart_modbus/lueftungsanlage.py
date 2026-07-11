@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .model import AerosmartComponent, uint32
+from .enums import VentilationMode
+from .model import AerosmartComponent, enum, uint32
 
 
 class Ventilation(AerosmartComponent):
@@ -24,8 +25,25 @@ class Ventilation(AerosmartComponent):
     )
 
     # Betriebsart
-    betriebsart = uint32(
-        5002, source_key="aerosmartm_betriebsart", description="Betriebsart"
+    # Verified against the official Drexel & Weiss doc: R/W, enum 0-5. Do not
+    # confuse with the two similarly-named but read-only registers
+    # betriebsart_sommerautomatik (1300, in sommerautomatik.py) and
+    # grobstaubfilter_betriebsart_filterueberwachung (5164) -- 5002 is the only
+    # writable "Betriebsart" register.
+    betriebsart = enum(
+        5002,
+        VentilationMode,
+        writable=True,
+        options=(
+            (0, "Manuell Stufe 0"),
+            (1, "Manuell Stufe 1"),
+            (2, "Manuell Stufe 2"),
+            (3, "Manuell Stufe 3"),
+            (4, "Automatikbetrieb"),
+            (5, "Party"),
+        ),
+        source_key="aerosmartm_betriebsart",
+        description="Betriebsart",
     )
 
     betriebsstunden_beschattung = uint32(
@@ -116,10 +134,13 @@ class Ventilation(AerosmartComponent):
     )
 
     # Erhöhung der Lüfterstufe 3 (R/W)
+    # Official Drexel & Weiss doc confirms R/W, 30-100 %.
     erhoehung_luefterstufe_3 = uint32(
         5330,
         unit="%",
         writable=True,
+        min_value=30,
+        max_value=100,
         source_key="aerosmartm_erhoehung_luefterstufe_3",
         description="Erhöhung der Lüfterstufe 3 (R/W)",
     )
@@ -189,10 +210,13 @@ class Ventilation(AerosmartComponent):
     )
 
     # Soll-Volumenstrom Lüfterstufe 2 (read/write)
+    # Official Drexel & Weiss doc confirms R/W, 40-300 m³/h.
     soll_volumenstrom_luefterstufe2 = uint32(
         5060,
         unit="m³/h",
         writable=True,
+        min_value=40,
+        max_value=300,
         source_key="aerosmartm_soll_volumenstrom_luefterstufe2",
         description="Soll-Volumenstrom Lüfterstufe 2 (read/write)",
     )

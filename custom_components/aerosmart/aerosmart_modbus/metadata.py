@@ -1,5 +1,4 @@
-"""
-Neutral aerosmart datapoint metadata.
+"""Neutral aerosmart datapoint metadata.
 
 This module intentionally contains no Home Assistant concepts.
 """
@@ -7,9 +6,10 @@ This module intentionally contains no Home Assistant concepts.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Literal
 
-ValueKind = Literal["number", "boolean"]
+ValueKind = Literal["number", "boolean", "enum"]
 
 
 @dataclass(frozen=True)
@@ -24,8 +24,7 @@ class NumberMetadata:
 
 @dataclass(frozen=True)
 class BooleanMetadata:
-    """
-    Metadata for boolean-flavoured aerosmart values.
+    """Metadata for boolean-flavoured aerosmart values.
 
     aerosmart exposes every datapoint as a holding register (never a real
     Modbus coil), including ones whose meaning is inherently yes/no (Stoerung,
@@ -39,9 +38,21 @@ class BooleanMetadata:
 
 
 @dataclass(frozen=True)
-class DatapointMetadata:
+class EnumMetadata:
+    """Metadata for enum-coded aerosmart values.
+
+    ``options`` maps each valid raw code to a human-readable label, in
+    document order -- the neutral equivalent of a Home Assistant ``select``
+    entity's option list, without any Home Assistant concepts here.
     """
-    Neutral metadata for one aerosmart datapoint.
+
+    enum_type: type[IntEnum]
+    options: tuple[tuple[int, str], ...]
+
+
+@dataclass(frozen=True)
+class DatapointMetadata:
+    """Neutral metadata for one aerosmart datapoint.
 
     ``source_key`` is the original YAML entity id (e.g.
     ``aerosmartm_wp_status``) the field was transcribed from — kept for
@@ -57,6 +68,7 @@ class DatapointMetadata:
     verified_writable: bool = False
     number: NumberMetadata | None = None
     boolean: BooleanMetadata | None = None
+    enum: EnumMetadata | None = None
 
 
 def attach_metadata(field: object, metadata: DatapointMetadata) -> object:
