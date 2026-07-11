@@ -1,0 +1,10 @@
+target-version = "py313"
+
+[lint]
+# A pragmatic subset rather than "ALL": this is a first-draft integration, not
+# yet chasing full home-assistant/core-style strictness (see quality_scale.yaml
+# equivalent gaps noted in the README's "Next steps").
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[lint.per-file-ignores]
+"tests/*" = ["ARG001"] # fixtures are requested for their side effects, not read
