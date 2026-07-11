@@ -1,5 +1,4 @@
-"""
-Switch platform for aerosmart (writable boost functions).
+"""Switch platform for aerosmart (writable boost functions).
 
 Every entity here is disabled by default: writability was inferred from the
 source register's name, not a manufacturer specification, and must be
@@ -37,13 +36,6 @@ SWITCH_DESCRIPTIONS: tuple[AerosmartSwitchEntityDescription, ...] = (
         name="Funktion BAD+",
         component="boost_functions_heat_pump",
         attribute="function_bad_plus",
-        entity_registry_enabled_default=False,
-    ),
-    AerosmartSwitchEntityDescription(
-        key="summer_bypass_function_sommerautomatik",
-        name="Funktion „Sommerautomatik“",
-        component="summer_bypass",
-        attribute="function_sommerautomatik",
         entity_registry_enabled_default=False,
     ),
 )

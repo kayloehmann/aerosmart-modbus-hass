@@ -15,8 +15,7 @@ from .entity import AerosmartEntity
 
 @dataclass(frozen=True, kw_only=True)
 class AerosmartBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """
-    Describes an aerosmart binary_sensor entity.
+    """Describes an aerosmart binary_sensor entity.
 
     The underlying register is a plain holding register, not a native Modbus
     coil -- ``is_on`` treats any non-zero value as True. This is a naming
@@ -220,6 +219,12 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[AerosmartBinarySensorEntityDescription, ...] =
         name="Anforderung: Sommerautomatik (read)",
         component="summer_bypass",
         attribute="anforderung_sommerautomatik",
+    ),
+    AerosmartBinarySensorEntityDescription(
+        key="summer_bypass_function_sommerautomatik",
+        name="Funktion „Sommerautomatik“",
+        component="summer_bypass",
+        attribute="function_sommerautomatik",
     ),
     AerosmartBinarySensorEntityDescription(
         key="aggregate_fault_stoerung_summenstoerung",
