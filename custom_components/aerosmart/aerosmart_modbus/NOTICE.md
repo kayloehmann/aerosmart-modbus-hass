@@ -1,7 +1,7 @@
 # Vendored dependency
 
 This directory is a vendored copy of [`aerosmart-modbus`](https://github.com/kayloehmann/aerosmart-modbus),
-version `0.1.0`, embedded here because this custom integration targets
+version `0.2.0`, embedded here because this custom integration targets
 current stable Home Assistant releases via HACS, and the standard path (a
 `manifest.json` PyPI `requirements` entry) would still work for the library
 itself but the integration additionally depends on the very new
