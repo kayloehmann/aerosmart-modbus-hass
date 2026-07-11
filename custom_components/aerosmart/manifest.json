@@ -5,9 +5,9 @@
   "config_flow": true,
   "dependencies": ["modbus_connection"],
   "documentation": "https://github.com/kayloehmann/aerosmart-modbus-hass",
-  "issue_tracker": "https://github.com/kayloehmann/aerosmart-modbus-hass/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/kayloehmann/aerosmart-modbus-hass/issues",
   "requirements": ["modbus-connection>=3.4,<4"],
   "version": "0.1.0"
 }
