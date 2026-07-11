@@ -14,7 +14,12 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .aerosmart_modbus import AerosmartDevice
-from .const import CONF_CONNECTION, CONF_UNIT_HEAT_PUMP, CONF_UNIT_VENTILATION
+from .const import (
+    CONF_CONNECTION,
+    CONF_UNIT_HEAT_PUMP,
+    CONF_UNIT_VENTILATION,
+    MESSAGE_SPACING_SECONDS,
+)
 from .coordinator import AerosmartConfigEntry, AerosmartCoordinator
 
 PLATFORMS: list[Platform] = [
@@ -39,6 +44,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) ->
     unit_heat_pump = async_get_unit(
         hass, entry.data[CONF_CONNECTION], entry.data[CONF_UNIT_HEAT_PUMP]
     )
+    unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
+    unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
     device = AerosmartDevice(unit_ventilation, unit_heat_pump)
     coordinator = AerosmartCoordinator(hass, entry, device)
 
