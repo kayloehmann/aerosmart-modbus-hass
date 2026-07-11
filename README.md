@@ -15,6 +15,20 @@ writing that means a recent `dev`/nightly build, not yet a stable numbered
 release. `hacs.json`'s `homeassistant` minimum version is a placeholder until
 a real stable release ships it; update it once one does.
 
+## CI status note
+
+`.github/workflows/validate.yml`'s HACS-validation job currently fails two
+checks (`hacsjson`, `integration_manifest`) that pass for every other file in
+this repo when checked locally (`hassfest` and `ruff` both pass). Both files
+are valid JSON and match the schema `hacs/action` otherwise validates
+successfully elsewhere -- the failure only appears while this repository is
+**private**. HACS's own validation is designed around repositories that are
+(or will become) publicly installable, and its content checks appear to fetch
+via the GitHub API rather than the local checkout, which behaves differently
+for a private repo's default `GITHUB_TOKEN`. Expected to resolve once this
+repository is made public; not investigated further given the scope of this
+first draft.
+
 If you need this to work today on a stable release instead, the alternative
 is a self-contained `pymodbus` transport instead of `modbus_connection` --
 that was considered and explicitly not chosen for this repository (see the
