@@ -11,12 +11,6 @@ from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from homeassistant.components.aerosmart.const import (
-    CONF_CONNECTION,
-    CONF_UNIT_HEAT_PUMP,
-    CONF_UNIT_VENTILATION,
-    DOMAIN,
-)
 from homeassistant.components.modbus_connection.const import (
     CONNECTION_TCP,
 )
@@ -27,6 +21,13 @@ from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.aerosmart.const import (
+    CONF_CONNECTION,
+    CONF_UNIT_HEAT_PUMP,
+    CONF_UNIT_VENTILATION,
+    DOMAIN,
+)
 
 
 @pytest.fixture(autouse=True)

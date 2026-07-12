@@ -4,15 +4,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant import config_entries
-from homeassistant.components.aerosmart.const import (
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.aerosmart.const import (
     CONF_CONNECTION,
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_modbus_unit_ventilation", "mock_modbus_unit_heat_pump")
