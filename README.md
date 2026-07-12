@@ -139,6 +139,39 @@ connectivity recovers.
   room temperature, boost functions) via the disabled-by-default
   `number`/`switch`/`select` entities.
 
+## Brand icon
+
+Not yet added. Home Assistant (since 2026.3, the "Brands Proxy API") can
+serve a custom integration's brand icon straight from its own repo -- no PR
+against [`home-assistant/brands`](https://github.com/home-assistant/brands)
+required. Detection is purely file-presence-based
+(`Integration.has_branding` in HA core checks for a `brand/` subdirectory),
+so once artwork exists this is just adding files, no manifest.json change:
+
+```
+custom_components/aerosmart/
+└── brand/
+    ├── icon.png            # required: 256x256 PNG, square, transparent bg preferred
+    ├── icon@2x.png         # optional hDPI: 512x512
+    ├── logo.png            # optional, if a non-square logo exists
+    ├── logo@2x.png
+    ├── dark_icon.png        # optional dark-theme variant
+    ├── dark_icon@2x.png
+    ├── dark_logo.png
+    └── dark_logo@2x.png
+```
+
+Missing files fall back sensibly (e.g. `logo.png` falls back to `icon.png`,
+`dark_*` falls back to the non-dark version) -- `icon.png` alone is enough to
+get a working icon everywhere. Image requirements mirror the classic
+`home-assistant/brands` spec: PNG, lossless/optimized, trimmed (no padding),
+transparent or white-background preferred, and must not reuse Home
+Assistant's own branding (would misleadingly suggest an official/internal
+integration). A separate PR against `home-assistant/brands` is still
+optionally worth doing later for store-browsing UIs (e.g. HACS) that pull
+from the public CDN before installation, but isn't required for the icon to
+show up inside Home Assistant itself.
+
 ## Development
 
 ```bash
@@ -173,12 +206,8 @@ them here. It's not an active target for a `home-assistant/core` submission.
 
 ## Next steps
 
-- Add [brand images](https://github.com/home-assistant/brands) under
-  `custom_integrations/aerosmart/` (currently `ignore: brands` in
-  `.github/workflows/validate.yml`) -- needs actual icon/logo artwork.
-- Cut a first GitHub release (currently 0 releases/tags) -- HACS pins
-  installs to releases where available; this also gates eventual inclusion
-  in the official HACS default store.
+- Add a brand icon under `custom_components/aerosmart/brand/` (see "Brand
+  icon" below) -- needs actual icon artwork, not yet added.
 - Port coordinator/entity/platform tests beyond `test_config_flow.py`.
 - Verify each disabled-by-default writable entity against the real unit, then
   flip its `entity_registry_enabled_default`.
