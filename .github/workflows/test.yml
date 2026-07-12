@@ -1,12 +1,12 @@
 name: Test
 
-# Manual only for now: modbus_connection (a dependency of this integration)
-# hasn't shipped in a stable homeassistant PyPI release yet (see README
-# "Known limitations"), so `pip install -r requirements_test.txt` can't
-# resolve `homeassistant.components.modbus_connection` and every run fails
-# on import, not on an actual test. Re-enable `push`/`pull_request` triggers
-# once a stable release includes it.
 on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
   workflow_dispatch:
 
 permissions:
@@ -28,6 +28,20 @@ jobs:
 
       - name: Install requirements
         run: python3 -m pip install -r requirements_test.txt
+
+      # modbus_connection (a hard dependency of this integration) hasn't
+      # shipped in a stable homeassistant PyPI release yet (see README
+      # "Known limitations"), so the stable `homeassistant` pulled in by
+      # requirements.txt above doesn't have it. Override with core's dev
+      # branch so tests/aerosmart's `modbus_connection` config-entry setup
+      # actually has something to resolve. This tracks a moving target and
+      # can occasionally break on unrelated upstream dev-branch changes --
+      # accepted tradeoff for being able to test this integration at all
+      # right now. pytest-homeassistant-custom-component is itself built
+      # against published homeassistant releases (see its own README), so a
+      # mismatch here is also a plausible failure source, not just our code.
+      - name: Install homeassistant from the dev branch (for modbus_connection)
+        run: python3 -m pip install --upgrade "homeassistant @ git+https://github.com/home-assistant/core.git@dev"
 
       - name: Run tests
         run: python3 -m pytest tests --verbose
