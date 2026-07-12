@@ -199,24 +199,39 @@ translations for the rest of the entity set, and sensor-platform tests --
 deliberately not guessed at where the naming heuristic doesn't give a clear
 enough answer.
 
-**Test suite is currently unverified in CI**: `.github/workflows/test.yml` is
-`workflow_dispatch`-only rather than running on every push, because
-`modbus_connection` (a hard dependency, see "Known limitations") isn't in any
-stable `homeassistant` PyPI release yet, so `pip install -r
-requirements_test.txt` can't resolve `homeassistant.components.modbus_connection`
--- every automatic run would fail on that import before a single test runs,
-not on an actual test failure. The tests themselves were written against real
-register addresses/enum tables pulled from the vendored `aerosmart_modbus`
-source and the actual `modbus_connection` mock API (not guessed), and two
-real bugs in the pre-existing config_flow tests were found and fixed along
-the way (a missing `enable_custom_integrations` fixture and a
-`homeassistant.components.aerosmart` import that can't resolve at collection
-time) -- but nothing here has actually been run end-to-end yet. Re-enable the
-`push`/`pull_request` triggers once a stable release includes
-`modbus_connection`, or point `requirements_test.txt` at
-`home-assistant/core`'s `dev` branch to test against sooner (considered,
-deliberately not done: heavier/slower CI, occasional breakage from unrelated
-upstream dev-branch changes).
+**Test suite is currently unverified in CI, and this is a genuine
+chicken-and-egg blocker, not just a config problem**: `.github/workflows/test.yml`
+is `workflow_dispatch`-only rather than running on every push. The tests
+themselves were written against real register addresses/enum tables pulled
+from the vendored `aerosmart_modbus` source and the actual `modbus_connection`
+mock API (not guessed), and two real bugs in the pre-existing config_flow
+tests were found and fixed along the way (a missing
+`enable_custom_integrations` fixture and a `homeassistant.components.aerosmart`
+import that can't resolve at collection time) -- but nothing here has
+actually run end-to-end. What was tried:
+
+1. Plain `pip install -r requirements_test.txt`: fails immediately --
+   `modbus_connection` (a hard dependency, see "Known limitations") isn't in
+   any stable/beta `homeassistant` release yet, so
+   `homeassistant.components.modbus_connection` can't be imported.
+2. Installing `homeassistant` from `home-assistant/core`'s `dev` branch
+   instead (which does have `modbus_connection`): got further -- needed
+   Python 3.14 (dev's current minimum) and the `modbus-connection[tmodbus]`
+   extra (`homeassistant.components.modbus_connection`'s own manifest
+   requirement) -- but then every test fails at `hass`-fixture setup with
+   `AttributeError: <module 'homeassistant.components.http' ...> does not
+   have the attribute 'start_http_server_and_save_config'`.
+   `pytest-homeassistant-custom-component`'s fixtures are *generated* against
+   a specific published homeassistant release (currently 2026.7.2, per its
+   own `ha_version` file) -- they don't track `dev` directly, so a `dev`-only
+   internal refactor (that function no longer exists there) breaks them,
+   independent of anything in this repo.
+
+Net result: this can't be tested end-to-end until `modbus_connection` lands
+in a release or beta that `pytest-homeassistant-custom-component` has
+already picked up. At that point, drop back to plain
+`pip install -r requirements_test.txt` (no dev-branch override needed) and
+re-enable the `push`/`pull_request` triggers.
 
 A parallel reference implementation was also built against
 `home-assistant/core`'s conventions (fork:
@@ -227,8 +242,10 @@ them here. It's not an active target for a `home-assistant/core` submission.
 
 ## Next steps
 
-- Get the test suite actually running in CI (see "Quality-scale status"
-  above) and confirm it's green -- entirely unverified so far.
+- Get the test suite actually running in CI once `modbus_connection` lands
+  in a release/beta `pytest-homeassistant-custom-component` has picked up
+  (see "Quality-scale status" above for why this is blocked, not just
+  unconfigured) and confirm it's green -- entirely unverified so far.
 - Add sensor-platform tests (only binary_sensor/number/select/switch/
   coordinator are covered so far).
 - Verify each disabled-by-default writable entity against the real unit, then
