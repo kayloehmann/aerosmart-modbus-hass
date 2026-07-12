@@ -207,6 +207,7 @@ SENSOR_DESCRIPTIONS: tuple[AerosmartSensorEntityDescription, ...] = (
         component="carbon_dioxide",
         attribute="co2",
         native_unit_of_measurement="ppm",
+        device_class=SensorDeviceClass.CO2,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     AerosmartSensorEntityDescription(

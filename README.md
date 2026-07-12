@@ -5,22 +5,6 @@ unit, built on Home Assistant's `modbus_connection` hub integration. Based on
 the [`ludeeus/integration_blueprint`](https://github.com/ludeeus/integration_blueprint)
 template.
 
-## Known limitation
-
-This integration depends on `modbus_connection`
-(`dependencies: ["modbus_connection"]` in `manifest.json`), which is a very
-new Home Assistant Core integration. **It only works on a Home Assistant
-installation that already includes `modbus_connection`** -- at the time of
-writing that means a recent `dev`/nightly build, not yet a stable numbered
-release. `hacs.json`'s `homeassistant` minimum version is a placeholder until
-a real stable release ships it; update it once one does.
-
-If you need this to work today on a stable release instead, the alternative
-is a self-contained `pymodbus` transport instead of `modbus_connection` --
-that was considered and explicitly not chosen for this repository (see the
-project history for why: matching the official upstream pattern was
-prioritized over immediate compatibility).
-
 ## What is this?
 
 The device's register map (137 registers across 16 sub-systems, 2 Modbus
@@ -32,22 +16,128 @@ core register/component model itself is a **vendored copy** of
 dependency, so this integration can be installed via HACS from this repo
 alone.
 
-## Installation
+## Supported devices
 
-Via [HACS](https://hacs.xyz/): Add this repository as a custom repository
-(category: Integration), then install "aerosmart". Requires a
-`modbus_connection` connection to already be configured (Settings ->
-Devices & services -> Add integration -> Modbus Connection) before adding
-this integration.
+One aerosmart ventilation/heat-pump installation, addressed as **two Modbus
+units behind a single connection**: a ventilation controller (default unit
+ID 1) and a heat pump / hot water controller (default unit ID 2). Both unit
+IDs are configurable in case a different installation numbers them
+differently. Only one physical installation has been used to transcribe the
+register map so far -- if your unit reports different values than expected
+for a given entity, treat the naming as a heuristic to verify, not a
+guarantee (see "Known limitations").
 
-## Entities
+## Supported functions
 
 - ~120 read-only `sensor`/`binary_sensor` entities mirroring the source
-  installation's existing register set.
-- 14 `number`/`switch` entities for registers whose name suggests they are
-  writable setpoints/functions -- **disabled by default**. Writability here
-  is a naming heuristic, not a confirmed specification; enable and verify
-  each one individually against your real unit before relying on it.
+  installation's existing register set: temperatures, filter runtimes,
+  operating-hour counters, fault/problem indicators, fan speeds, heat-pump
+  state, hot water temperatures.
+- 14 `number`/`switch`/`select` entities for registers whose name suggests
+  they are writable setpoints or functions -- **disabled by default**, since
+  writability was inferred from the register's name rather than a confirmed
+  manufacturer specification (see "Known limitations").
+- Diagnostics (`custom_components/aerosmart/diagnostics.py`): a full dump of
+  every known register's current value, downloadable from the integration's
+  device page for troubleshooting or filing an issue.
+- A reconfigure flow: change the Modbus connection or either unit ID from the
+  integration's "Configure" menu without removing and re-adding it.
+
+## Prerequisites / installation instructions
+
+1. A `modbus_connection` connection must already be configured (Settings ->
+   Devices & services -> Add integration -> Modbus Connection) before adding
+   this integration -- aerosmart borrows its Modbus units from that
+   connection rather than owning one itself.
+2. Via [HACS](https://hacs.xyz/): add this repository as a custom repository
+   (category: Integration), then install "aerosmart" and restart Home
+   Assistant if prompted.
+3. Settings -> Devices & services -> Add integration -> "aerosmart", then
+   pick the Modbus connection and the two station addresses (defaults: 1 for
+   ventilation, 2 for heat pump).
+
+### Configuration parameters
+
+| Parameter | Description |
+| --- | --- |
+| Modbus connection | Which existing `modbus_connection` entry to borrow units from. |
+| Ventilation unit | The ventilation controller's Modbus station address (default 1). |
+| Heat pump unit | The heat pump / hot water controller's Modbus station address (default 2). |
+
+All three can be changed later via the integration's "Configure" menu
+(reconfigure flow) -- for example if the installation's station addresses
+turn out to differ from the defaults.
+
+## Removal instructions
+
+Settings -> Devices & services -> aerosmart -> the three-dot menu -> Delete.
+This only removes the aerosmart config entry and its entities/device; it does
+not affect the underlying `modbus_connection` entry, which other
+integrations (or another aerosmart entry) may still be using.
+
+## How data updates
+
+All entities share one `DataUpdateCoordinator` that polls both units every
+30 seconds (`SCAN_INTERVAL` in `const.py`) -- adding or removing entities
+never changes what gets polled, since the coordinator always fans out to
+every sub-system. If a poll fails, entities go `unavailable`; Home Assistant
+logs an error once (not on every failed poll) and an info message once
+connectivity recovers.
+
+## Known limitations
+
+- This integration depends on `modbus_connection`
+  (`dependencies: ["modbus_connection"]` in `manifest.json`), which is a very
+  new Home Assistant Core integration. **It only works on a Home Assistant
+  installation that already includes `modbus_connection`** -- at the time of
+  writing that means a recent `dev`/nightly build, not yet a stable numbered
+  release. `hacs.json`'s `homeassistant` minimum version is a placeholder
+  until a real stable release ships it; update it once one does.
+
+  If you need this to work today on a stable release instead, the
+  alternative is a self-contained `pymodbus` transport instead of
+  `modbus_connection` -- that was considered and explicitly not chosen for
+  this repository (see the project history for why: matching the official
+  upstream pattern was prioritized over immediate compatibility).
+- The register map is transcribed from one real installation's existing
+  `modbus:` YAML, not an official manufacturer specification. Entity names,
+  units, and especially **writability of `number`/`switch`/`select`
+  entities are naming heuristics** -- verify each one against your own unit
+  before relying on it, particularly before automating anything that writes.
+- Only one HA device represents the whole installation; ventilation and heat
+  pump are not split into separate devices even though they're separate
+  Modbus units.
+
+## Troubleshooting
+
+- **Entities go `unavailable` intermittently, or the log shows Modbus
+  timeouts/mismatched responses:** if your unit sits behind a slow
+  RS232-to-Modbus-TCP gateway (as the reference installation does), sending
+  requests back-to-back with no pacing can make the gateway return responses
+  under stale or mismatched transaction IDs. `MESSAGE_SPACING_SECONDS` in
+  `const.py` (currently 0.3s) adds spacing between requests to the
+  `modbus_connection` unit specifically to work around this; if you still see
+  the issue, try increasing it.
+- **"Failed to connect" during setup or reconfigure:** confirms the chosen
+  `modbus_connection` entry is loaded and both station addresses are
+  reachable through it -- the config flow probes the ventilation unit's
+  general sub-system once before creating/updating the entry.
+- **Something looks wrong with a specific entity's value:** download
+  diagnostics (device page -> Download diagnostics) to get every register's
+  raw value in one file; useful both for your own debugging and for
+  attaching to a GitHub issue.
+
+## Use cases / examples
+
+- Dashboard cards for supply/exhaust air temperature, fan speed, and heat
+  pump state alongside the rest of your climate dashboard.
+- Automations on the fault (`device_class: problem`) binary sensors --
+  e.g. notify on `binary_sensor.aerosmart_stoerung_*` turning on.
+- Filter-change reminders from the `_wechseln` ("needs changing") binary
+  sensors instead of a fixed calendar schedule.
+- Once individually verified against your unit, automating setpoints (target
+  room temperature, boost functions) via the disabled-by-default
+  `number`/`switch`/`select` entities.
 
 ## Development
 
@@ -61,28 +151,37 @@ Or open this repo in the provided dev container (`.devcontainer.json`).
 
 ## Quality-scale status
 
-The sibling repo, [`homeassistant/components/aerosmart`](https://github.com/kayloehmann/core/tree/aerosmart-integration/homeassistant/components/aerosmart),
-is the reference implementation being brought up to Home Assistant's
-[Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/)
-Platinum tier for an eventual `home-assistant/core` submission (tracked in
-that repo's `quality_scale.yaml`). This repo mirrors its code changes as they
-land, adapted for HACS (vendored `aerosmart_modbus`, `strings.json` +
-`translations/en.json` instead of `strings.json` alone). As of the last sync:
-config-flow test coverage, a reconfigure flow, translated exceptions,
-`diagnostics.py`, per-entity translation keys, `PARALLEL_UPDATES`, and
-`entity_category` on the clearly-diagnostic entities are in. Still open in
-both repos: brand images, `entity_category` for the remaining ~127 entities,
-icon translations, the full Silver/Gold docs set, and a real `mypy --strict` /
-full pytest run (declared in `.strict-typing` core-side, not yet executed).
+This integration's code quality is tracked informally against Home
+Assistant's [Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/)
+checklist as a quality bar, even though this repo targets HACS rather than
+`home-assistant/core` inclusion. Done: config-flow test coverage (incl. a
+reconfigure flow), translated exceptions, `diagnostics.py`, per-entity
+translation keys, `PARALLEL_UPDATES`, `entity_category`/`device_class` on the
+~40 entities where it's clearly justified (presence/"vorhanden" sensors,
+fault/"Störung" sensors, internal "Anforderung" signals, CO2). Still open:
+brand images, a full `entity_category` pass over the remaining entities,
+icon translations, and broader test coverage beyond config_flow (coordinator/
+entity/platform tests) -- deliberately not guessed at where the naming
+heuristic doesn't give a clear enough answer.
+
+A parallel reference implementation was also built against
+`home-assistant/core`'s conventions (fork:
+[`kayloehmann/core@aerosmart-integration`](https://github.com/kayloehmann/core/tree/aerosmart-integration)),
+mainly as a way to validate patterns (reconfigure-flow duplicate-ID handling,
+translated exceptions) against the stricter core test harness before porting
+them here. It's not an active target for a `home-assistant/core` submission.
 
 ## Next steps
 
-- Add [brand images](https://github.com/home-assistant/brands) (currently
-  `ignore: brands` in `.github/workflows/validate.yml`).
-- Port the remaining test files from the sibling repo's
-  [`tests/components/aerosmart`](https://github.com/kayloehmann/core/tree/aerosmart-integration/tests/components/aerosmart)
-  (coordinator/entity/platform coverage; only config_flow is ported so far).
+- Add [brand images](https://github.com/home-assistant/brands) under
+  `custom_integrations/aerosmart/` (currently `ignore: brands` in
+  `.github/workflows/validate.yml`) -- needs actual icon/logo artwork.
+- Cut a first GitHub release (currently 0 releases/tags) -- HACS pins
+  installs to releases where available; this also gates eventual inclusion
+  in the official HACS default store.
+- Port coordinator/entity/platform tests beyond `test_config_flow.py`.
 - Verify each disabled-by-default writable entity against the real unit, then
   flip its `entity_registry_enabled_default`.
 - Update `hacs.json`'s `homeassistant` minimum version once `modbus_connection`
-  ships in a stable release, and drop the "Known limitation" section above.
+  ships in a stable release, and drop the corresponding "Known limitations"
+  bullet above.
