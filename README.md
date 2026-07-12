@@ -189,14 +189,34 @@ This integration's code quality is tracked informally against Home
 Assistant's [Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/)
 checklist as a quality bar, even though this repo targets HACS rather than
 `home-assistant/core` inclusion. Done: config-flow test coverage (incl. a
-reconfigure flow), translated exceptions, `diagnostics.py`, per-entity
-translation keys, `PARALLEL_UPDATES`, `entity_category`/`device_class` on the
-~40 entities where it's clearly justified (presence/"vorhanden" sensors,
-fault/"Störung" sensors, internal "Anforderung" signals, CO2), and a brand
-icon. Still open: a full `entity_category` pass over the remaining entities,
-icon translations, and broader test coverage beyond config_flow (coordinator/
-entity/platform tests) -- deliberately not guessed at where the naming
-heuristic doesn't give a clear enough answer.
+reconfigure flow), coordinator/number/switch/select/binary_sensor tests,
+translated exceptions, `diagnostics.py`, per-entity translation keys,
+`PARALLEL_UPDATES`, `entity_category`/`device_class` on the ~40 entities
+where it's clearly justified (presence/"vorhanden" sensors, fault/"Störung"
+sensors, internal "Anforderung" signals, CO2), and a brand icon. Still open:
+a full `entity_category` pass over the remaining entities, icon
+translations for the rest of the entity set, and sensor-platform tests --
+deliberately not guessed at where the naming heuristic doesn't give a clear
+enough answer.
+
+**Test suite is currently unverified in CI**: `.github/workflows/test.yml` is
+`workflow_dispatch`-only rather than running on every push, because
+`modbus_connection` (a hard dependency, see "Known limitations") isn't in any
+stable `homeassistant` PyPI release yet, so `pip install -r
+requirements_test.txt` can't resolve `homeassistant.components.modbus_connection`
+-- every automatic run would fail on that import before a single test runs,
+not on an actual test failure. The tests themselves were written against real
+register addresses/enum tables pulled from the vendored `aerosmart_modbus`
+source and the actual `modbus_connection` mock API (not guessed), and two
+real bugs in the pre-existing config_flow tests were found and fixed along
+the way (a missing `enable_custom_integrations` fixture and a
+`homeassistant.components.aerosmart` import that can't resolve at collection
+time) -- but nothing here has actually been run end-to-end yet. Re-enable the
+`push`/`pull_request` triggers once a stable release includes
+`modbus_connection`, or point `requirements_test.txt` at
+`home-assistant/core`'s `dev` branch to test against sooner (considered,
+deliberately not done: heavier/slower CI, occasional breakage from unrelated
+upstream dev-branch changes).
 
 A parallel reference implementation was also built against
 `home-assistant/core`'s conventions (fork:
@@ -207,7 +227,10 @@ them here. It's not an active target for a `home-assistant/core` submission.
 
 ## Next steps
 
-- Port coordinator/entity/platform tests beyond `test_config_flow.py`.
+- Get the test suite actually running in CI (see "Quality-scale status"
+  above) and confirm it's green -- entirely unverified so far.
+- Add sensor-platform tests (only binary_sensor/number/select/switch/
+  coordinator are covered so far).
 - Verify each disabled-by-default writable entity against the real unit, then
   flip its `entity_registry_enabled_default`.
 - Update `hacs.json`'s `homeassistant` minimum version once `modbus_connection`
