@@ -6,3 +6,4 @@ pytest-asyncio
 # modbus_connection.mock -- importing the core integration module pulls in
 # its backend imports regardless of whether a test mocks connect_tcp/serial.
 modbus-connection[tmodbus]
+mypy

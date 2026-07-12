@@ -191,13 +191,25 @@ checklist as a quality bar, even though this repo targets HACS rather than
 `home-assistant/core` inclusion. Done: config-flow test coverage (incl. a
 reconfigure flow), coordinator/number/switch/select/binary_sensor tests,
 translated exceptions, `diagnostics.py`, per-entity translation keys,
-`PARALLEL_UPDATES`, `entity_category`/`device_class` on the ~40 entities
-where it's clearly justified (presence/"vorhanden" sensors, fault/"Störung"
-sensors, internal "Anforderung" signals, CO2), and a brand icon. Still open:
-a full `entity_category` pass over the remaining entities, icon
-translations for the rest of the entity set, and sensor-platform tests --
-deliberately not guessed at where the naming heuristic doesn't give a clear
-enough answer.
+`PARALLEL_UPDATES`, a brand icon, and a full `entity_category`/`device_class`
+pass: `DIAGNOSTIC` on 64 entities (presence sensors, fault/"Störung" sensors,
+internal "Anforderung" signals, configured thresholds/limits like frost- and
+summer-bypass setpoints, operating-hour/lifetime counters, the device's
+clock/sync fields), `CONFIG` on all 11 `number` setpoints, `device_class` on
+fault sensors (`PROBLEM`) and CO2 (`CO2`). Left uncategorized on purpose:
+live measurements/status (temperatures, fan speeds, current operating mode)
+and the `select`/`switch` entities (their state *is* the primary function,
+not configuration of it). `strict-typing`: `pyproject.toml` has a `[tool.mypy]`
+`strict = true` config (vendored `aerosmart_modbus` excluded -- separately
+maintained, separately typed, see its own `NOTICE.md`); a manual pass found
+the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
+`_subsystem` property in `entity.py`) and no others. Still open: icon
+translations for the rest of the entity set.
+
+**Neither the test suite nor `mypy --strict` have actually been run** --
+both need `homeassistant` installed to resolve `modbus_connection`-dependent
+imports, which hits the exact same blocker either way (see below). Treat the
+mypy config as a declared target, not a verified pass.
 
 **Test suite is currently unverified in CI, and this is a genuine
 chicken-and-egg blocker, not just a config problem**: `.github/workflows/test.yml`
@@ -242,12 +254,15 @@ them here. It's not an active target for a `home-assistant/core` submission.
 
 ## Next steps
 
-- Get the test suite actually running in CI once `modbus_connection` lands
-  in a release/beta `pytest-homeassistant-custom-component` has picked up
-  (see "Quality-scale status" above for why this is blocked, not just
-  unconfigured) and confirm it's green -- entirely unverified so far.
+- Get the test suite *and* `mypy --strict` actually running in CI once
+  `modbus_connection` lands in a release/beta `pytest-homeassistant-custom-component`
+  has picked up (see "Quality-scale status" above for why both are blocked on
+  the same thing, not just unconfigured) and confirm they're green -- neither
+  has actually been run.
 - Add sensor-platform tests (only binary_sensor/number/select/switch/
   coordinator are covered so far).
+- Add icon translations for the rest of the entity set (`icons.json`
+  currently only covers filter/fan/heat-pump/CO2/boost-switch entities).
 - Verify each disabled-by-default writable entity against the real unit, then
   flip its `entity_registry_enabled_default`.
 - Update `hacs.json`'s `homeassistant` minimum version once `modbus_connection`

@@ -1,2 +1,15 @@
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+
+# aerosmart_modbus is a vendored copy of a separately-maintained, separately
+# typed library (see its NOTICE.md) -- not this integration's own code, so
+# not in scope for this integration's strict-typing bar.
+[[tool.mypy.overrides]]
+module = "custom_components.aerosmart.aerosmart_modbus.*"
+ignore_errors = true

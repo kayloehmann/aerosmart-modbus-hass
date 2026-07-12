@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AerosmartConfigEntry
@@ -31,6 +32,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="boost_functions_ventilation_zeitspanne_function_heizung_plus",
         translation_key="boost_functions_ventilation_zeitspanne_function_heizung_plus",
+        entity_category=EntityCategory.CONFIG,
         component="boost_functions_ventilation",
         attribute="zeitspanne_function_heizung_plus",
         entity_registry_enabled_default=False,
@@ -41,6 +43,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="boost_functions_ventilation_sollwert_erhoehung_function_heizung_plus",
         translation_key="boost_functions_ventilation_sollwert_erhoehung_function_heizung_plus",
+        entity_category=EntityCategory.CONFIG,
         component="boost_functions_ventilation",
         attribute="sollwert_erhoehung_function_heizung_plus",
         entity_registry_enabled_default=False,
@@ -51,6 +54,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="boost_functions_ventilation_zeitspanne_function_party",
         translation_key="boost_functions_ventilation_zeitspanne_function_party",
+        entity_category=EntityCategory.CONFIG,
         component="boost_functions_ventilation",
         attribute="zeitspanne_function_party",
         entity_registry_enabled_default=False,
@@ -61,6 +65,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="ventilation_erhoehung_luefterstufe_3",
         translation_key="ventilation_erhoehung_luefterstufe_3",
+        entity_category=EntityCategory.CONFIG,
         component="ventilation",
         attribute="erhoehung_luefterstufe_3",
         entity_registry_enabled_default=False,
@@ -71,6 +76,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="ventilation_soll_volumenstrom_luefterstufe2",
         translation_key="ventilation_soll_volumenstrom_luefterstufe2",
+        entity_category=EntityCategory.CONFIG,
         component="ventilation",
         attribute="soll_volumenstrom_luefterstufe2",
         entity_registry_enabled_default=False,
@@ -81,6 +87,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="room_temperature_temp_raumluft_soll",
         translation_key="room_temperature_temp_raumluft_soll",
+        entity_category=EntityCategory.CONFIG,
         component="room_temperature",
         attribute="temp_raumluft_soll",
         entity_registry_enabled_default=False,
@@ -91,6 +98,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="summer_bypass_sommerautomatik_schaltpunkt1",
         translation_key="summer_bypass_sommerautomatik_schaltpunkt1",
+        entity_category=EntityCategory.CONFIG,
         component="summer_bypass",
         attribute="sommerautomatik_schaltpunkt1",
         entity_registry_enabled_default=False,
@@ -100,6 +108,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="summer_bypass_sommerautomatik_schaltpunkt2",
         translation_key="summer_bypass_sommerautomatik_schaltpunkt2",
+        entity_category=EntityCategory.CONFIG,
         component="summer_bypass",
         attribute="sommerautomatik_schaltpunkt2",
         entity_registry_enabled_default=False,
@@ -109,6 +118,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="summer_bypass_sommerautomatik_schaltpunkt3",
         translation_key="summer_bypass_sommerautomatik_schaltpunkt3",
+        entity_category=EntityCategory.CONFIG,
         component="summer_bypass",
         attribute="sommerautomatik_schaltpunkt3",
         entity_registry_enabled_default=False,
@@ -118,6 +128,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="summer_bypass_sommerautomatik_schaltpunkt4",
         translation_key="summer_bypass_sommerautomatik_schaltpunkt4",
+        entity_category=EntityCategory.CONFIG,
         component="summer_bypass",
         attribute="sommerautomatik_schaltpunkt4",
         entity_registry_enabled_default=False,
@@ -127,6 +138,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
     AerosmartNumberEntityDescription(
         key="hot_water_heat_pump_wp_brauchwasser_soll_temp",
         translation_key="hot_water_heat_pump_wp_brauchwasser_soll_temp",
+        entity_category=EntityCategory.CONFIG,
         component="hot_water_heat_pump",
         attribute="wp_brauchwasser_soll_temp",
         entity_registry_enabled_default=False,
