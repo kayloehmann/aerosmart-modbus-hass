@@ -28,6 +28,17 @@ from homeassistant.core import HomeAssistant
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
+    """Make custom_components/aerosmart loadable in every test in this suite.
+
+    Without requesting this fixture, Home Assistant's component loader
+    ignores ``custom_components`` entirely, so config-entry setup would
+    silently fail to find the integration.
+    """
+
+
 UNIT_VENTILATION = 1
 UNIT_HEAT_PUMP = 2
 
