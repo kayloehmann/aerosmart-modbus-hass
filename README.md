@@ -141,21 +141,22 @@ connectivity recovers.
 
 ## Brand icon
 
-Not yet added. Home Assistant (since 2026.3, the "Brands Proxy API") can
-serve a custom integration's brand icon straight from its own repo -- no PR
-against [`home-assistant/brands`](https://github.com/home-assistant/brands)
+Added: `custom_components/aerosmart/brand/icon.png` (256x256) and
+`icon@2x.png` (512x512). Home Assistant (since 2026.3, the "Brands Proxy
+API") serves a custom integration's brand icon straight from its own repo --
+no PR against [`home-assistant/brands`](https://github.com/home-assistant/brands)
 required. Detection is purely file-presence-based
 (`Integration.has_branding` in HA core checks for a `brand/` subdirectory),
-so once artwork exists this is just adding files, no manifest.json change:
+no manifest.json change needed. Supported files:
 
 ```
 custom_components/aerosmart/
 └── brand/
-    ├── icon.png            # required: 256x256 PNG, square, transparent bg preferred
-    ├── icon@2x.png         # optional hDPI: 512x512
-    ├── logo.png            # optional, if a non-square logo exists
+    ├── icon.png            # done: 256x256 PNG, square, transparent bg
+    ├── icon@2x.png         # done: 512x512 hDPI
+    ├── logo.png            # not added -- icon.png serves as fallback
     ├── logo@2x.png
-    ├── dark_icon.png        # optional dark-theme variant
+    ├── dark_icon.png        # not added -- optional dark-theme variant
     ├── dark_icon@2x.png
     ├── dark_logo.png
     └── dark_logo@2x.png
@@ -191,8 +192,8 @@ checklist as a quality bar, even though this repo targets HACS rather than
 reconfigure flow), translated exceptions, `diagnostics.py`, per-entity
 translation keys, `PARALLEL_UPDATES`, `entity_category`/`device_class` on the
 ~40 entities where it's clearly justified (presence/"vorhanden" sensors,
-fault/"Störung" sensors, internal "Anforderung" signals, CO2). Still open:
-brand images, a full `entity_category` pass over the remaining entities,
+fault/"Störung" sensors, internal "Anforderung" signals, CO2), and a brand
+icon. Still open: a full `entity_category` pass over the remaining entities,
 icon translations, and broader test coverage beyond config_flow (coordinator/
 entity/platform tests) -- deliberately not guessed at where the naming
 heuristic doesn't give a clear enough answer.
@@ -206,8 +207,6 @@ them here. It's not an active target for a `home-assistant/core` submission.
 
 ## Next steps
 
-- Add a brand icon under `custom_components/aerosmart/brand/` (see "Brand
-  icon" below) -- needs actual icon artwork, not yet added.
 - Port coordinator/entity/platform tests beyond `test_config_flow.py`.
 - Verify each disabled-by-default writable entity against the real unit, then
   flip its `entity_registry_enabled_default`.
