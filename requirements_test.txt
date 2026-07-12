@@ -1,3 +1,8 @@
 -r requirements.txt
 pytest-homeassistant-custom-component
 pytest-asyncio
+# homeassistant.components.modbus_connection's own manifest.json requires the
+# [tmodbus] extra (a real backend), even though our tests only ever exercise
+# modbus_connection.mock -- importing the core integration module pulls in
+# its backend imports regardless of whether a test mocks connect_tcp/serial.
+modbus-connection[tmodbus]
