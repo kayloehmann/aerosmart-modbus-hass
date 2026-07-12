@@ -59,15 +59,29 @@ this integration.
 
 Or open this repo in the provided dev container (`.devcontainer.json`).
 
+## Quality-scale status
+
+The sibling repo, [`homeassistant/components/aerosmart`](https://github.com/kayloehmann/core/tree/aerosmart-integration/homeassistant/components/aerosmart),
+is the reference implementation being brought up to Home Assistant's
+[Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/)
+Platinum tier for an eventual `home-assistant/core` submission (tracked in
+that repo's `quality_scale.yaml`). This repo mirrors its code changes as they
+land, adapted for HACS (vendored `aerosmart_modbus`, `strings.json` +
+`translations/en.json` instead of `strings.json` alone). As of the last sync:
+config-flow test coverage, a reconfigure flow, translated exceptions,
+`diagnostics.py`, per-entity translation keys, `PARALLEL_UPDATES`, and
+`entity_category` on the clearly-diagnostic entities are in. Still open in
+both repos: brand images, `entity_category` for the remaining ~127 entities,
+icon translations, the full Silver/Gold docs set, and a real `mypy --strict` /
+full pytest run (declared in `.strict-typing` core-side, not yet executed).
+
 ## Next steps
 
 - Add [brand images](https://github.com/home-assistant/brands) (currently
   `ignore: brands` in `.github/workflows/validate.yml`).
-- Add tests -- [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component)
-  can help get started; the sibling repo's
-  [`homeassistant/components/aerosmart`](https://github.com/kayloehmann/core/tree/aerosmart-integration/tests/components/aerosmart)
-  tests cover the same logic against the real `homeassistant` test harness and
-  can be adapted.
+- Port the remaining test files from the sibling repo's
+  [`tests/components/aerosmart`](https://github.com/kayloehmann/core/tree/aerosmart-integration/tests/components/aerosmart)
+  (coordinator/entity/platform coverage; only config_flow is ported so far).
 - Verify each disabled-by-default writable entity against the real unit, then
   flip its `entity_registry_enabled_default`.
 - Update `hacs.json`'s `homeassistant` minimum version once `modbus_connection`

@@ -1,9 +1,10 @@
-"""
-Base entity for aerosmart.
+"""Base entity for aerosmart.
 
 One HA device represents the whole installation (both Modbus units); this
 integration does not split ventilation/heat-pump into separate devices.
 """
+
+from typing import Any
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
@@ -32,6 +33,10 @@ class AerosmartEntity(CoordinatorEntity[AerosmartCoordinator]):
         )
 
     @property
-    def _subsystem(self):
-        """The device-library sub-system object this entity reads/writes."""
+    def _subsystem(self) -> Any:
+        """The device-library sub-system object this entity reads/writes.
+
+        Typed ``Any``: ``aerosmart_modbus`` doesn't expose a common base type
+        for its per-subsystem component classes to attribute-check against.
+        """
         return getattr(self.coordinator.data, self.entity_description.component)

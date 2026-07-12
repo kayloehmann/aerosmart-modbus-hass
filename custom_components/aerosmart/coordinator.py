@@ -16,8 +16,7 @@ type AerosmartConfigEntry = ConfigEntry[AerosmartCoordinator]
 
 
 class AerosmartCoordinator(DataUpdateCoordinator[AerosmartDevice]):
-    """
-    Refreshes both aerosmart units on a schedule.
+    """Refreshes both aerosmart units on a schedule.
 
     ``AerosmartDevice.async_update`` fans out to each unit's pooled component
     group, so adding/removing entities never changes what is polled. The
@@ -45,5 +44,9 @@ class AerosmartCoordinator(DataUpdateCoordinator[AerosmartDevice]):
         try:
             await self.device.async_update()
         except ModbusError as err:
-            raise UpdateFailed(f"Error communicating with aerosmart: {err}") from err
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
         return self.device
