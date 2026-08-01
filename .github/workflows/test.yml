@@ -1,21 +1,13 @@
 name: Test
 
-# Manual only: a genuine chicken-and-egg blocker, not something more CI
-# iteration fixes (see README "Quality-scale status" for the full story).
-# modbus_connection (a hard dependency of this integration) only exists on
-# home-assistant/core's dev branch -- no stable/beta release has it yet. But
-# pytest-homeassistant-custom-component's fixtures are generated against a
-# specific *published* homeassistant release/beta (currently 2026.7.2, see
-# its own `ha_version` file) and don't track dev directly, so installing
-# `homeassistant` from dev to get modbus_connection breaks PHACC's fixtures
-# on unrelated dev-branch-only refactors (confirmed:
-# homeassistant.components.http.start_http_server_and_save_config, which an
-# extracted-for-2026.7.2 fixture tries to patch, no longer exists on dev).
-# Revisit once modbus_connection lands in a release/beta that PHACC has
-# picked up -- at that point drop the dev-branch override entirely and go
-# back to plain `pip install -r requirements_test.txt`.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
 
 permissions:
   contents: read

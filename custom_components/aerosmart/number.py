@@ -6,10 +6,11 @@ verified against the real unit before being relied on.
 """
 
 from dataclasses import dataclass
+from typing import cast
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AerosmartConfigEntry
@@ -39,6 +40,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
         native_unit_of_measurement="min",
         native_min_value=30,
         native_max_value=240,
+        native_step=1,
     ),
     AerosmartNumberEntityDescription(
         key="boost_functions_ventilation_sollwert_erhoehung_function_heizung_plus",
@@ -61,6 +63,7 @@ NUMBER_DESCRIPTIONS: tuple[AerosmartNumberEntityDescription, ...] = (
         native_unit_of_measurement="min",
         native_min_value=60,
         native_max_value=240,
+        native_step=1,
     ),
     AerosmartNumberEntityDescription(
         key="ventilation_erhoehung_luefterstufe_3",
@@ -169,9 +172,17 @@ class AerosmartNumber(AerosmartEntity, NumberEntity):
     @property
     def native_value(self) -> float | int | None:
         """Return the register's current value."""
-        return getattr(self._subsystem, self.entity_description.attribute)
+        value = cast(
+            float | int | None,
+            getattr(self._subsystem, self.entity_description.attribute),
+        )
+        if value is not None and self.entity_description.native_step == 1:
+            # Registers documented in whole minutes use a rounded decimal
+            # scale for 1/60; hide its tiny binary floating-point residue.
+            return round(value)
+        return value
 
     async def async_set_native_value(self, value: float) -> None:
         """Write the new setpoint and refresh."""
         await self._subsystem.write(self.entity_description.attribute, value)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()

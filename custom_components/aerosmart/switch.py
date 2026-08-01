@@ -72,9 +72,9 @@ class AerosmartSwitch(AerosmartEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the function on."""
         await self._subsystem.write(self.entity_description.attribute, 1)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the function off."""
         await self._subsystem.write(self.entity_description.attribute, 0)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()

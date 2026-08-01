@@ -1,6 +1,7 @@
 """Sensor platform for aerosmart."""
 
 from dataclasses import dataclass
+from typing import cast
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -8,8 +9,8 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AerosmartConfigEntry
@@ -718,4 +719,7 @@ class AerosmartSensor(AerosmartEntity, SensorEntity):
     @property
     def native_value(self) -> float | int | None:
         """Return the register's current value."""
-        return getattr(self._subsystem, self.entity_description.attribute)
+        return cast(
+            float | int | None,
+            getattr(self._subsystem, self.entity_description.attribute),
+        )

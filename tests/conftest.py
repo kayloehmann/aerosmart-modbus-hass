@@ -1,29 +1,14 @@
-"""
-Fixtures for the aerosmart tests.
-
-The ``mock_modbus_connection`` fixture comes from the ``modbus_connection``
-library's pytest plugin (registered as a ``pytest11`` entry point). Seeding
-both units' stores drives the real ``aerosmart_modbus`` library exactly as the
-two physical Modbus units would.
-"""
+"""Fixtures for the aerosmart tests."""
 
 from collections.abc import Generator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.components.modbus_connection.const import (
-    CONNECTION_TCP,
-)
-from homeassistant.components.modbus_connection.const import (
-    DOMAIN as MODBUS_CONNECTION_DOMAIN,
-)
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
-from homeassistant.core import HomeAssistant
+from homeassistant.const import CONF_HOST, CONF_PORT
 from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aerosmart.const import (
-    CONF_CONNECTION,
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
     DOMAIN,
@@ -80,54 +65,41 @@ def mock_modbus_unit_heat_pump(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Prevent the created entry from actually setting up during flow tests."""
     with patch(
-        "homeassistant.components.aerosmart.async_setup_entry",
+        "custom_components.aerosmart.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
-@pytest.fixture
-def mock_connect(
+@pytest.fixture(autouse=True)
+def mock_connection_factory(
     mock_modbus_connection: MockModbusConnection,
-) -> Generator[AsyncMock]:
-    """Patch the modbus_connection backend to return the mock connection."""
-    connect = AsyncMock(return_value=mock_modbus_connection)
-    with (
-        patch("homeassistant.components.modbus_connection.connect_tcp", connect),
-        patch("homeassistant.components.modbus_connection.connect_serial", connect),
-    ):
-        yield connect
+) -> Generator[MagicMock]:
+    """Route every integration-owned connection through the in-memory mock.
 
-
-@pytest.fixture
-async def connection_entry(
-    hass: HomeAssistant,
-    mock_connect: AsyncMock,
-) -> MockConfigEntry:
-    """Set up a loaded modbus_connection entry backed by the seeded mock."""
-    entry = MockConfigEntry(
-        domain=MODBUS_CONNECTION_DOMAIN,
-        title="1.2.3.4:502",
-        data={CONF_TYPE: CONNECTION_TCP, CONF_HOST: "1.2.3.4", CONF_PORT: 502},
-    )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    return entry
+    ``close`` is replaced with a no-op spy so config-entry reload tests can
+    reuse the same in-memory register store while still verifying ownership.
+    """
+    mock_modbus_connection.close = AsyncMock()  # type: ignore[method-assign]
+    factory = MagicMock(return_value=mock_modbus_connection)
+    with patch("custom_components.aerosmart.connection.create_tcp_connection", factory):
+        yield factory
 
 
 @pytest.fixture
 def mock_config_entry(
-    connection_entry: MockConfigEntry,
     mock_modbus_unit_ventilation: MockModbusUnit,
     mock_modbus_unit_heat_pump: MockModbusUnit,
 ) -> MockConfigEntry:
-    """An aerosmart config entry pointing at ``connection_entry``."""
+    """An aerosmart config entry that owns its TCP connection."""
     return MockConfigEntry(
         domain=DOMAIN,
         title="aerosmart",
+        unique_id="1.2.3.4:502_1_2",
+        version=2,
         data={
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "1.2.3.4",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: UNIT_VENTILATION,
             CONF_UNIT_HEAT_PUMP: UNIT_HEAT_PUMP,
         },

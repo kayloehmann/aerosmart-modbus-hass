@@ -5,9 +5,14 @@ from typing import Final
 
 DOMAIN: Final = "aerosmart"
 
-CONF_CONNECTION: Final = "connection_entry_id"
 CONF_UNIT_VENTILATION: Final = "unit_ventilation"
 CONF_UNIT_HEAT_PUMP: Final = "unit_heat_pump"
+
+# Used only to migrate config entries created before the integration owned its
+# Modbus TCP connection. Do not use this key for new entries.
+LEGACY_CONF_CONNECTION: Final = "connection_entry_id"
+
+DEFAULT_PORT: Final = 502
 
 # The installation this library was transcribed from uses unit 1 for the
 # ventilation controller and unit 2 for the heat pump; both are configurable

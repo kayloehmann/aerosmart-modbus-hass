@@ -1,15 +1,15 @@
 """Tests for the aerosmart config flow."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant import config_entries
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aerosmart.const import (
-    CONF_CONNECTION,
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
     DOMAIN,
@@ -19,7 +19,6 @@ from custom_components.aerosmart.const import (
 @pytest.mark.usefixtures("mock_modbus_unit_ventilation", "mock_modbus_unit_heat_pump")
 async def test_full_flow(
     hass: HomeAssistant,
-    connection_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """A valid connection and both unit IDs create an entry."""
@@ -32,7 +31,8 @@ async def test_full_flow(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "  GATEWAY.local  ",
+            CONF_PORT: 8899,
             CONF_UNIT_VENTILATION: 1,
             CONF_UNIT_HEAT_PUMP: 2,
         },
@@ -42,7 +42,8 @@ async def test_full_flow(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "aerosmart"
     assert result["data"] == {
-        CONF_CONNECTION: connection_entry.entry_id,
+        CONF_HOST: "GATEWAY.local",
+        CONF_PORT: 8899,
         CONF_UNIT_VENTILATION: 1,
         CONF_UNIT_HEAT_PUMP: 2,
     }
@@ -50,10 +51,10 @@ async def test_full_flow(
 
 
 async def test_cannot_connect(
-    hass: HomeAssistant, connection_entry: MockConfigEntry
+    hass: HomeAssistant, mock_connection_factory: MagicMock
 ) -> None:
     """An unreachable unit shows a form error instead of aborting."""
-    await connection_entry.runtime_data.close()
+    mock_connection_factory.side_effect = OSError("unreachable")
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -61,7 +62,8 @@ async def test_cannot_connect(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "1.2.3.4",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: 1,
             CONF_UNIT_HEAT_PUMP: 2,
         },
@@ -74,7 +76,6 @@ async def test_cannot_connect(
 @pytest.mark.usefixtures("mock_modbus_unit_ventilation", "mock_modbus_unit_heat_pump")
 async def test_duplicate_entry(
     hass: HomeAssistant,
-    connection_entry: MockConfigEntry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """The same connection and both unit IDs abort as already configured."""
@@ -86,7 +87,8 @@ async def test_duplicate_entry(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "1.2.3.4",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: 1,
             CONF_UNIT_HEAT_PUMP: 2,
         },
@@ -99,7 +101,6 @@ async def test_duplicate_entry(
 @pytest.mark.usefixtures("mock_modbus_unit_ventilation")
 async def test_reconfigure_success(
     hass: HomeAssistant,
-    connection_entry: MockConfigEntry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Reconfiguring to a different heat pump unit ID updates the entry."""
@@ -112,7 +113,8 @@ async def test_reconfigure_success(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "1.2.3.4",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: 1,
             CONF_UNIT_HEAT_PUMP: 3,
         },
@@ -126,18 +128,19 @@ async def test_reconfigure_success(
 
 async def test_reconfigure_cannot_connect(
     hass: HomeAssistant,
-    connection_entry: MockConfigEntry,
     mock_config_entry: MockConfigEntry,
+    mock_connection_factory: MagicMock,
 ) -> None:
     """An unreachable unit during reconfigure shows a form error."""
     mock_config_entry.add_to_hass(hass)
-    await connection_entry.runtime_data.close()
+    mock_connection_factory.side_effect = OSError("unreachable")
 
     result = await mock_config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "1.2.3.4",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: 1,
             CONF_UNIT_HEAT_PUMP: 2,
         },
@@ -150,7 +153,6 @@ async def test_reconfigure_cannot_connect(
 @pytest.mark.usefixtures("mock_modbus_unit_ventilation", "mock_modbus_unit_heat_pump")
 async def test_reconfigure_duplicate(
     hass: HomeAssistant,
-    connection_entry: MockConfigEntry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Reconfiguring onto another entry's connection+units aborts as duplicate."""
@@ -158,9 +160,11 @@ async def test_reconfigure_duplicate(
     other_entry = MockConfigEntry(
         domain=DOMAIN,
         title="aerosmart",
-        unique_id=f"{connection_entry.entry_id}_9_10",
+        unique_id="other-gateway.local:502_9_10",
+        version=2,
         data={
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "other-gateway.local",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: 9,
             CONF_UNIT_HEAT_PUMP: 10,
         },
@@ -171,7 +175,8 @@ async def test_reconfigure_duplicate(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_CONNECTION: connection_entry.entry_id,
+            CONF_HOST: "other-gateway.local",
+            CONF_PORT: 502,
             CONF_UNIT_VENTILATION: 9,
             CONF_UNIT_HEAT_PUMP: 10,
         },

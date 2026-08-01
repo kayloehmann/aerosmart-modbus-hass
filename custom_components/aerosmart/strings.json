@@ -2,34 +2,38 @@
   "config": {
     "step": {
       "user": {
-        "description": "Select the Modbus connection the aerosmart unit is reached through and its two station addresses.",
+        "description": "Enter the Modbus TCP gateway and the two station addresses used by the aerosmart installation.",
         "data": {
-          "connection_entry_id": "Modbus connection",
+          "host": "Host",
+          "port": "Port",
           "unit_ventilation": "Ventilation unit",
           "unit_heat_pump": "Heat pump unit"
         },
         "data_description": {
-          "connection_entry_id": "The Modbus connection this unit is reached through.",
+          "host": "Hostname or IP address of the Modbus TCP gateway.",
+          "port": "TCP port of the Modbus gateway (default 502).",
           "unit_ventilation": "The ventilation controller's Modbus station address (default 1).",
           "unit_heat_pump": "The heat pump / hot water controller's Modbus station address (default 2)."
         }
       },
       "reconfigure": {
-        "description": "Select the Modbus connection the aerosmart unit is reached through and its two station addresses.",
+        "description": "Change the Modbus TCP gateway or either station address.",
         "data": {
-          "connection_entry_id": "Modbus connection",
+          "host": "Host",
+          "port": "Port",
           "unit_ventilation": "Ventilation unit",
           "unit_heat_pump": "Heat pump unit"
         },
         "data_description": {
-          "connection_entry_id": "The Modbus connection this unit is reached through.",
+          "host": "Hostname or IP address of the Modbus TCP gateway.",
+          "port": "TCP port of the Modbus gateway (default 502).",
           "unit_ventilation": "The ventilation controller's Modbus station address (default 1).",
           "unit_heat_pump": "The heat pump / hot water controller's Modbus station address (default 2)."
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect. Check that the unit is reachable on the selected connection and both station addresses."
+      "cannot_connect": "Failed to connect. Check the host, port, and both station addresses."
     },
     "abort": {
       "already_configured": "Device is already configured",

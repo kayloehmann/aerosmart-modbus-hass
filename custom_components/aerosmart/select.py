@@ -79,4 +79,4 @@ class AerosmartSelect(AerosmartEntity, SelectEntity):
         """Write the selected option's underlying enum code."""
         code = self._label_to_code[option]
         await self._subsystem.write(self.entity_description.attribute, code)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()

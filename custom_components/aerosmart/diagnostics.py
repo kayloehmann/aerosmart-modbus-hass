@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 
 from .binary_sensor import BINARY_SENSOR_DESCRIPTIONS
@@ -18,6 +20,8 @@ _ALL_DESCRIPTIONS = (
     + SELECT_DESCRIPTIONS
     + SWITCH_DESCRIPTIONS
 )
+
+_TO_REDACT = {CONF_HOST}
 
 
 async def async_get_config_entry_diagnostics(
@@ -39,11 +43,15 @@ async def async_get_config_entry_diagnostics(
         registers[description.key] = getattr(subsystem, description.attribute)
 
     return {
-        "entry_data": {
-            "connection_entry_id": entry.data["connection_entry_id"],
-            "unit_ventilation": entry.data["unit_ventilation"],
-            "unit_heat_pump": entry.data["unit_heat_pump"],
-        },
+        "entry_data": async_redact_data(
+            {
+                CONF_HOST: entry.data[CONF_HOST],
+                CONF_PORT: entry.data[CONF_PORT],
+                "unit_ventilation": entry.data["unit_ventilation"],
+                "unit_heat_pump": entry.data["unit_heat_pump"],
+            },
+            _TO_REDACT,
+        ),
         "last_update_success": coordinator.last_update_success,
         "registers": registers,
     }

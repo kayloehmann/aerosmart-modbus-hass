@@ -4,7 +4,7 @@ One HA device represents the whole installation (both Modbus units); this
 integration does not split ventilation/heat-pump into separate devices.
 """
 
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
@@ -26,6 +26,7 @@ class AerosmartEntity(CoordinatorEntity[AerosmartCoordinator]):
         super().__init__(coordinator)
         self.entity_description = entity_description
         entry = coordinator.config_entry
+        assert entry is not None
         self._attr_unique_id = f"{entry.entry_id}_{entity_description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
@@ -39,4 +40,5 @@ class AerosmartEntity(CoordinatorEntity[AerosmartCoordinator]):
         Typed ``Any``: ``aerosmart_modbus`` doesn't expose a common base type
         for its per-subsystem component classes to attribute-check against.
         """
-        return getattr(self.coordinator.data, self.entity_description.component)
+        description = cast(Any, self.entity_description)
+        return getattr(self.coordinator.data, description.component)

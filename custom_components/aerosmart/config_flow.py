@@ -1,52 +1,56 @@
 """Config flow for aerosmart."""
 
+import asyncio
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.components.modbus_connection import (
-    ConnectionNotReady,
-    async_get_unit,
-)
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers.selector import (
-    ConfigEntrySelector,
-    ConfigEntrySelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
-from modbus_connection import ModbusError
+from modbus_connection import ModbusConnection, ModbusError
 
+from . import connection as connection_api
 from .aerosmart_modbus import AerosmartDevice
 from .const import (
-    CONF_CONNECTION,
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
+    DEFAULT_PORT,
     DEFAULT_UNIT_HEAT_PUMP,
     DEFAULT_UNIT_VENTILATION,
     DOMAIN,
+    MESSAGE_SPACING_SECONDS,
 )
 
 # A named tuple, not an inline `except (A, B, C):` -- ruff's formatter has a
 # bug where it strips the required parentheses from a multi-type except
 # clause, producing invalid Python 2-style syntax. Referencing a module-level
 # constant instead sidesteps it.
-_CONNECT_ERRORS = (ConnectionNotReady, ModbusError, OSError, ValueError)
+_CONNECT_ERRORS = (ModbusError, OSError, ValueError)
 
 STEP_USER = vol.Schema(
     {
-        vol.Required(CONF_CONNECTION): ConfigEntrySelector(
-            ConfigEntrySelectorConfig(integration="modbus_connection")
+        vol.Required(CONF_HOST): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.TEXT)
+        ),
+        vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
+            NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
         ),
         vol.Required(
             CONF_UNIT_VENTILATION, default=DEFAULT_UNIT_VENTILATION
         ): NumberSelector(
-            NumberSelectorConfig(min=1, max=255, step=1, mode=NumberSelectorMode.BOX)
+            NumberSelectorConfig(min=1, max=247, step=1, mode=NumberSelectorMode.BOX)
         ),
         vol.Required(
             CONF_UNIT_HEAT_PUMP, default=DEFAULT_UNIT_HEAT_PUMP
         ): NumberSelector(
-            NumberSelectorConfig(min=1, max=255, step=1, mode=NumberSelectorMode.BOX)
+            NumberSelectorConfig(min=1, max=247, step=1, mode=NumberSelectorMode.BOX)
         ),
     }
 )
@@ -55,18 +59,18 @@ STEP_USER = vol.Schema(
 class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for aerosmart."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Pick a Modbus connection and both unit IDs."""
+        """Configure the TCP endpoint and both unit IDs."""
         return await self._async_step_connection(user_input, step_id="user")
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Change the Modbus connection and/or either unit ID of an existing entry."""
+        """Change the TCP endpoint and/or either unit ID of an existing entry."""
         return await self._async_step_connection(user_input, step_id="reconfigure")
 
     async def _async_step_connection(
@@ -84,11 +88,8 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         errors: dict[str, str] = {}
         if user_input is not None:
-            await self.async_set_unique_id(
-                f"{user_input[CONF_CONNECTION]}"
-                f"_{int(user_input[CONF_UNIT_VENTILATION])}"
-                f"_{int(user_input[CONF_UNIT_HEAT_PUMP])}"
-            )
+            user_input = self._normalize_input(user_input)
+            await self.async_set_unique_id(self._unique_id(user_input))
             if step_id == "reconfigure":
                 reconfigure_entry = self._get_reconfigure_entry()
                 if self.unique_id != reconfigure_entry.unique_id:
@@ -115,16 +116,41 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id=step_id, data_schema=schema, errors=errors)
 
     async def _async_can_connect(self, data: dict[str, Any]) -> bool:
-        """Probe both units by reading the general sub-system once."""
+        """Probe both units and always release the temporary connection."""
+        connection: ModbusConnection | None = None
         try:
-            unit_ventilation = async_get_unit(
-                self.hass, data[CONF_CONNECTION], int(data[CONF_UNIT_VENTILATION])
+            connection = connection_api.create_tcp_connection(
+                data[CONF_HOST], data[CONF_PORT]
             )
-            unit_heat_pump = async_get_unit(
-                self.hass, data[CONF_CONNECTION], int(data[CONF_UNIT_HEAT_PUMP])
-            )
+            unit_ventilation = connection.for_unit(data[CONF_UNIT_VENTILATION])
+            unit_heat_pump = connection.for_unit(data[CONF_UNIT_HEAT_PUMP])
+            unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
+            unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
             device = AerosmartDevice(unit_ventilation, unit_heat_pump)
-            await device.general.async_update()
+            await asyncio.gather(
+                device.general.async_update(), device.utility_lockout.async_update()
+            )
         except _CONNECT_ERRORS:
             return False
+        finally:
+            if connection is not None:
+                await connection.close()
         return True
+
+    @staticmethod
+    def _normalize_input(data: dict[str, Any]) -> dict[str, Any]:
+        """Normalize selector values before storing them."""
+        return {
+            CONF_HOST: str(data[CONF_HOST]).strip(),
+            CONF_PORT: int(data[CONF_PORT]),
+            CONF_UNIT_VENTILATION: int(data[CONF_UNIT_VENTILATION]),
+            CONF_UNIT_HEAT_PUMP: int(data[CONF_UNIT_HEAT_PUMP]),
+        }
+
+    @staticmethod
+    def _unique_id(data: dict[str, Any]) -> str:
+        """Return the identity of one installation endpoint."""
+        return (
+            f"{data[CONF_HOST].lower()}:{data[CONF_PORT]}"
+            f"_{data[CONF_UNIT_VENTILATION]}_{data[CONF_UNIT_HEAT_PUMP]}"
+        )

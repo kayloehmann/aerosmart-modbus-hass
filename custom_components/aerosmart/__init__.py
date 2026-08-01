@@ -1,23 +1,15 @@
-"""
-The aerosmart integration.
+"""The aerosmart integration."""
 
-aerosmart is a Modbus device. This integration does not own its connection: it
-borrows two ``ModbusUnit`` handles (ventilation + heat pump) from a
-``modbus_connection`` config entry chosen in the config flow, and hands them to
-the ``aerosmart_modbus`` library. The ``modbus_connection`` entry owns the
-connection lifecycle; this integration reloads when the connection drops so it
-re-borrows on the rebuilt connection.
-"""
-
-from homeassistant.components.modbus_connection import async_get_unit
-from homeassistant.const import Platform
+from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 
+from . import connection as connection_api
 from .aerosmart_modbus import AerosmartDevice
 from .const import (
-    CONF_CONNECTION,
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
+    DEFAULT_PORT,
+    LEGACY_CONF_CONNECTION,
     MESSAGE_SPACING_SECONDS,
 )
 from .coordinator import AerosmartConfigEntry, AerosmartCoordinator
@@ -32,41 +24,60 @@ PLATFORMS: list[Platform] = [
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:
-    """
-    Set up aerosmart from a config entry.
-
-    ``async_get_unit`` raises ``ConnectionNotReady`` (a ``ConfigEntryNotReady``)
-    if the shared connection is missing or not loaded; letting it propagate gives
-    Home Assistant's setup retry.
-    """
-    unit_ventilation = async_get_unit(
-        hass, entry.data[CONF_CONNECTION], entry.data[CONF_UNIT_VENTILATION]
+    """Set up aerosmart from a config entry."""
+    connection = connection_api.create_tcp_connection(
+        entry.data[CONF_HOST], entry.data[CONF_PORT]
     )
-    unit_heat_pump = async_get_unit(
-        hass, entry.data[CONF_CONNECTION], entry.data[CONF_UNIT_HEAT_PUMP]
-    )
+    unit_ventilation = connection.for_unit(entry.data[CONF_UNIT_VENTILATION])
+    unit_heat_pump = connection.for_unit(entry.data[CONF_UNIT_HEAT_PUMP])
     unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
     unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
     device = AerosmartDevice(unit_ventilation, unit_heat_pump)
-    coordinator = AerosmartCoordinator(hass, entry, device)
+    coordinator = AerosmartCoordinator(hass, entry, device, connection)
 
-    await coordinator.async_config_entry_first_refresh()
-
-    entry.runtime_data = coordinator
-
-    # Both units are bound to modbus_connection's current connection. When that
-    # connection drops, modbus_connection rebuilds it; reload so we re-borrow
-    # fresh units on the rebuilt connection instead of holding dead ones.
-    entry.async_on_unload(
-        unit_ventilation.on_connection_lost(
-            lambda: hass.config_entries.async_schedule_reload(entry.entry_id)
-        )
-    )
-
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    return True
+    setup_complete = False
+    try:
+        await coordinator.async_config_entry_first_refresh()
+        entry.runtime_data = coordinator
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        setup_complete = True
+        return True
+    finally:
+        if not setup_complete:
+            await connection.close()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        await entry.runtime_data.connection.close()
+    return unload_ok
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:
+    """Migrate entries that referenced the withdrawn shared-connection integration."""
+    if entry.version != 1 or LEGACY_CONF_CONNECTION not in entry.data:
+        return True
+
+    legacy_entry = hass.config_entries.async_get_entry(
+        entry.data[LEGACY_CONF_CONNECTION]
+    )
+    if legacy_entry is None or CONF_HOST not in legacy_entry.data:
+        return False
+
+    host = str(legacy_entry.data[CONF_HOST])
+    port = int(legacy_entry.data.get(CONF_PORT, DEFAULT_PORT))
+    data = {
+        CONF_HOST: host,
+        CONF_PORT: port,
+        CONF_UNIT_VENTILATION: int(entry.data[CONF_UNIT_VENTILATION]),
+        CONF_UNIT_HEAT_PUMP: int(entry.data[CONF_UNIT_HEAT_PUMP]),
+    }
+    hass.config_entries.async_update_entry(
+        entry,
+        data=data,
+        unique_id=f"{host.lower()}:{port}_{data[CONF_UNIT_VENTILATION]}_{data[CONF_UNIT_HEAT_PUMP]}",
+        version=2,
+    )
+    return True

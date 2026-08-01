@@ -1,8 +1,7 @@
 """Tests for the aerosmart config-entry setup."""
 
-from unittest.mock import patch
-
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from modbus_connection.mock import MockModbusConnection
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -26,18 +25,47 @@ async def test_setup_entry_creates_entities(
     assert outside_temp.state == "0.123"
 
 
-async def test_reloads_on_connection_lost(
+async def test_unload_closes_owned_connection(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_modbus_connection: MockModbusConnection,
 ) -> None:
-    """Losing the shared connection reloads the entry to re-borrow units."""
+    """Unloading the entry permanently closes its owned connection."""
     mock_config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
-    with patch.object(hass.config_entries, "async_schedule_reload") as schedule_reload:
-        mock_modbus_connection.simulate_connection_lost()
-        await hass.async_block_till_done()
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
 
-    schedule_reload.assert_called_once_with(mock_config_entry.entry_id)
+    mock_modbus_connection.close.assert_awaited_once()
+
+
+async def test_migrates_legacy_shared_connection_entry(hass: HomeAssistant) -> None:
+    """Version 1 entries copy host and port from their former connection entry."""
+    legacy_connection = MockConfigEntry(
+        domain="modbus_connection",
+        data={CONF_HOST: "gateway.local", CONF_PORT: 8899},
+    )
+    legacy_connection.add_to_hass(hass)
+    entry = MockConfigEntry(
+        domain="aerosmart",
+        version=1,
+        data={
+            "connection_entry_id": legacy_connection.entry_id,
+            "unit_ventilation": 1,
+            "unit_heat_pump": 2,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    from custom_components.aerosmart import async_migrate_entry
+
+    assert await async_migrate_entry(hass, entry)
+    assert entry.version == 2
+    assert entry.unique_id == "gateway.local:8899_1_2"
+    assert entry.data == {
+        CONF_HOST: "gateway.local",
+        CONF_PORT: 8899,
+        "unit_ventilation": 1,
+        "unit_heat_pump": 2,
+    }
