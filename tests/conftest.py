@@ -80,6 +80,7 @@ def mock_connection_factory(
     ``close`` is replaced with a no-op spy so config-entry reload tests can
     reuse the same in-memory register store while still verifying ownership.
     """
+    mock_modbus_connection.connect = AsyncMock()  # type: ignore[attr-defined]
     mock_modbus_connection.close = AsyncMock()  # type: ignore[method-assign]
     factory = MagicMock(return_value=mock_modbus_connection)
     with patch("custom_components.aerosmart.connection.create_tcp_connection", factory):

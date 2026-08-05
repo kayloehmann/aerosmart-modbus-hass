@@ -4,7 +4,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from modbus_connection import ModbusConnectionError
-from modbus_connection.mock import MockModbusUnit
+from modbus_connection.mock import MockModbusConnection, MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
@@ -67,3 +67,28 @@ async def test_recovers_after_transient_failure(
     assert coordinator.last_update_success is True
     wochentag = hass.states.get("sensor.aerosmart_wochentag")
     assert wochentag.state == "3"
+
+
+async def test_reconnects_before_refresh_after_connection_loss(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_modbus_connection: MockModbusConnection,
+) -> None:
+    """A later refresh reconnects a dropped transport before reading."""
+    mock_config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    async def reconnect() -> None:
+        mock_modbus_connection._connected = True  # noqa: SLF001
+
+    mock_modbus_connection.connect.reset_mock()
+    mock_modbus_connection.connect.side_effect = reconnect
+    mock_modbus_connection.simulate_connection_lost()
+
+    coordinator = mock_config_entry.runtime_data
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    mock_modbus_connection.connect.assert_awaited_once()
+    assert coordinator.last_update_success is True

@@ -8,13 +8,16 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
 async def test_setup_entry_creates_entities(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_modbus_connection: MockModbusConnection,
 ) -> None:
     """The entry loads and produces entities across every platform."""
     mock_config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
+    mock_modbus_connection.connect.assert_awaited_once()
 
     wochentag = hass.states.get("sensor.aerosmart_wochentag")
     assert wochentag is not None

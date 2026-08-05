@@ -192,7 +192,7 @@ not configuration of it). `strict-typing`: `pyproject.toml` has a `[tool.mypy]`
 maintained, separately typed, see its own `NOTICE.md`); a manual pass found
 the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
 `_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and all
-18 tests pass in CI. The same suite has also been verified locally against
+20 tests pass in CI. The same suite has also been verified locally against
 Home Assistant 2026.8.0 on Python 3.14.5. Still open: icon translations for
 the rest of the entity set.
 

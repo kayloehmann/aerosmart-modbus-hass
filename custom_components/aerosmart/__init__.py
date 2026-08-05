@@ -28,15 +28,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) ->
     connection = connection_api.create_tcp_connection(
         entry.data[CONF_HOST], entry.data[CONF_PORT]
     )
-    unit_ventilation = connection.for_unit(entry.data[CONF_UNIT_VENTILATION])
-    unit_heat_pump = connection.for_unit(entry.data[CONF_UNIT_HEAT_PUMP])
-    unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
-    unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
-    device = AerosmartDevice(unit_ventilation, unit_heat_pump)
-    coordinator = AerosmartCoordinator(hass, entry, device, connection)
-
     setup_complete = False
     try:
+        await connection.connect()
+        unit_ventilation = connection.for_unit(entry.data[CONF_UNIT_VENTILATION])
+        unit_heat_pump = connection.for_unit(entry.data[CONF_UNIT_HEAT_PUMP])
+        unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
+        unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
+        device = AerosmartDevice(unit_ventilation, unit_heat_pump)
+        coordinator = AerosmartCoordinator(hass, entry, device, connection)
         await coordinator.async_config_entry_first_refresh()
         entry.runtime_data = coordinator
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

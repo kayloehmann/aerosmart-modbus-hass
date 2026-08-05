@@ -1,6 +1,7 @@
 """Config flow for aerosmart."""
 
 import asyncio
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -27,6 +28,8 @@ from .const import (
     DOMAIN,
     MESSAGE_SPACING_SECONDS,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 # A named tuple, not an inline `except (A, B, C):` -- ruff's formatter has a
 # bug where it strips the required parentheses from a multi-type except
@@ -122,6 +125,7 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
             connection = connection_api.create_tcp_connection(
                 data[CONF_HOST], data[CONF_PORT]
             )
+            await connection.connect()
             unit_ventilation = connection.for_unit(data[CONF_UNIT_VENTILATION])
             unit_heat_pump = connection.for_unit(data[CONF_UNIT_HEAT_PUMP])
             unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
@@ -130,7 +134,8 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
             await asyncio.gather(
                 device.general.async_update(), device.utility_lockout.async_update()
             )
-        except _CONNECT_ERRORS:
+        except _CONNECT_ERRORS as err:
+            _LOGGER.warning("Failed to validate aerosmart connection: %s", err)
             return False
         finally:
             if connection is not None:

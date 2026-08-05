@@ -43,6 +43,8 @@ class AerosmartCoordinator(DataUpdateCoordinator[AerosmartDevice]):
     async def _async_update_data(self) -> AerosmartDevice:
         """Fetch the latest data from both aerosmart units."""
         try:
+            if not self.connection.connected:
+                await self.connection.connect()
             await self.device.async_update()
         except ModbusError as err:
             raise UpdateFailed(
