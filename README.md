@@ -84,6 +84,9 @@ addresses. If a poll fails, entities go `unavailable`; Home Assistant
 logs an error once (not on every failed poll) and an info message once
 connectivity recovers.
 
+Requests are serialized across both station addresses with a 300 ms gap. This
+is required by the reference installation's slow serial-to-TCP gateway.
+
 ## Known limitations
 
 - The integration owns its Modbus TCP connection. Do not configure another
@@ -194,7 +197,7 @@ not configuration of it). `strict-typing`: `pyproject.toml` has a `[tool.mypy]`
 maintained, separately typed, see its own `NOTICE.md`); a manual pass found
 the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
 `_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and all
-21 tests pass in CI. The same suite has also been verified locally against
+22 tests pass in CI. The same suite has also been verified locally against
 Home Assistant 2026.8.0 on Python 3.14.5. Still open: icon translations for
 the rest of the entity set.
 

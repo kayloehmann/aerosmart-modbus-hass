@@ -10,7 +10,6 @@ from .const import (
     CONF_UNIT_VENTILATION,
     DEFAULT_PORT,
     LEGACY_CONF_CONNECTION,
-    MESSAGE_SPACING_SECONDS,
 )
 from .coordinator import AerosmartConfigEntry, AerosmartCoordinator
 
@@ -33,8 +32,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) ->
         await connection.connect()
         unit_ventilation = connection.for_unit(entry.data[CONF_UNIT_VENTILATION])
         unit_heat_pump = connection.for_unit(entry.data[CONF_UNIT_HEAT_PUMP])
-        unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
-        unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
         device = AerosmartDevice(unit_ventilation, unit_heat_pump)
         coordinator = AerosmartCoordinator(hass, entry, device, connection)
         await coordinator.async_config_entry_first_refresh()

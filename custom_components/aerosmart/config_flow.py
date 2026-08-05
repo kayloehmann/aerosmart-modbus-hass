@@ -1,6 +1,5 @@
 """Config flow for aerosmart."""
 
-import asyncio
 import logging
 from typing import Any
 
@@ -25,7 +24,6 @@ from .const import (
     DEFAULT_UNIT_HEAT_PUMP,
     DEFAULT_UNIT_VENTILATION,
     DOMAIN,
-    MESSAGE_SPACING_SECONDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -127,12 +125,8 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
             await connection.connect()
             unit_ventilation = connection.for_unit(data[CONF_UNIT_VENTILATION])
             unit_heat_pump = connection.for_unit(data[CONF_UNIT_HEAT_PUMP])
-            unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
-            unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
-            await asyncio.gather(
-                unit_ventilation.read_holding_registers(1174, 2),
-                unit_heat_pump.read_holding_registers(1044, 2),
-            )
+            await unit_ventilation.read_holding_registers(1174, 2)
+            await unit_heat_pump.read_holding_registers(1044, 2)
         except _CONNECT_ERRORS as err:
             _LOGGER.warning("Failed to validate aerosmart connection: %s", err)
             return False
