@@ -12,7 +12,7 @@ def test_transport_requirements_are_explicit() -> None:
     )
     manifest: dict[str, Any] = json.loads(manifest_path.read_text())
 
-    assert "modbus-connection>=3.4,<4" in manifest["requirements"]
+    assert "modbus-connection==3.9.0" in manifest["requirements"]
     assert "tmodbus==0.5.0" in manifest["requirements"]
     assert all(
         "[tmodbus]" not in requirement for requirement in manifest["requirements"]
