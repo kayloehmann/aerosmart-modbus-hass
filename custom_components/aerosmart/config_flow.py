@@ -18,7 +18,6 @@ from homeassistant.helpers.selector import (
 from modbus_connection import ModbusConnection, ModbusError
 
 from . import connection as connection_api
-from .aerosmart_modbus import AerosmartDevice
 from .const import (
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
@@ -130,9 +129,9 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
             unit_heat_pump = connection.for_unit(data[CONF_UNIT_HEAT_PUMP])
             unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
             unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
-            device = AerosmartDevice(unit_ventilation, unit_heat_pump)
             await asyncio.gather(
-                device.general.async_update(), device.utility_lockout.async_update()
+                unit_ventilation.read_holding_registers(1174, 2),
+                unit_heat_pump.read_holding_registers(1044, 2),
             )
         except _CONNECT_ERRORS as err:
             _LOGGER.warning("Failed to validate aerosmart connection: %s", err)

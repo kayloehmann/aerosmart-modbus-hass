@@ -78,7 +78,9 @@ TCP connection owned by that entry.
 All entities share one `DataUpdateCoordinator` that polls both units every
 30 seconds (`SCAN_INTERVAL` in `const.py`) -- adding or removing entities
 never changes what gets polled, since the coordinator always fans out to
-every sub-system. If a poll fails, entities go `unavailable`; Home Assistant
+every sub-system. Each 32-bit datapoint is read separately because real
+aerosmart controllers reject larger combined reads even across adjacent
+addresses. If a poll fails, entities go `unavailable`; Home Assistant
 logs an error once (not on every failed poll) and an info message once
 connectivity recovers.
 
@@ -192,7 +194,7 @@ not configuration of it). `strict-typing`: `pyproject.toml` has a `[tool.mypy]`
 maintained, separately typed, see its own `NOTICE.md`); a manual pass found
 the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
 `_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and all
-20 tests pass in CI. The same suite has also been verified locally against
+21 tests pass in CI. The same suite has also been verified locally against
 Home Assistant 2026.8.0 on Python 3.14.5. Still open: icon translations for
 the rest of the entity set.
 
