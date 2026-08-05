@@ -191,14 +191,18 @@ not configuration of it). `strict-typing`: `pyproject.toml` has a `[tool.mypy]`
 `strict = true` config (vendored `aerosmart_modbus` excluded -- separately
 maintained, separately typed, see its own `NOTICE.md`); a manual pass found
 the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
-`_subsystem` property in `entity.py`) and no others. Still open: icon
-translations for the rest of the entity set.
+`_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and all
+18 tests pass in CI. The same suite has also been verified locally against
+Home Assistant 2026.8.0 on Python 3.14.5. Still open: icon translations for
+the rest of the entity set.
 
 The integration no longer imports the withdrawn
 `homeassistant.components.modbus_connection` component. Its tests use the
 published `modbus-connection` package's in-memory backend, so the normal
 released Home Assistant test stack can run them. The test workflow is enabled
-for pushes and pull requests as well as manual dispatches.
+for pushes and pull requests as well as manual dispatches, and covers both
+Python 3.13 and 3.14 so compatibility with the 2026.7 and 2026.8 Home Assistant
+generations remains visible.
 
 A parallel reference implementation was also built against
 `home-assistant/core`'s conventions (fork:

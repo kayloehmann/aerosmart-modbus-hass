@@ -1,7 +1,8 @@
 -r requirements.txt
 pytest-homeassistant-custom-component
 pytest-asyncio
-# The integration owns this backend directly; tests replace it with the
-# package's in-memory mock.
-modbus-connection[tmodbus]
+# Keep both transport packages explicit, just like manifest.json. Home Assistant
+# checks whether the base distribution is installed without validating extras.
+modbus-connection>=3.4,<4
+tmodbus==0.5.0
 mypy
