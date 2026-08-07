@@ -3,8 +3,33 @@
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
+from modbus_connection import ModbusTimeoutError
 from modbus_connection.mock import MockModbusConnection
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+
+async def test_setup_entry_retries_on_connect_failure(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_modbus_connection: MockModbusConnection,
+) -> None:
+    """A connect failure schedules a retry instead of a permanent setup error.
+
+    The gateway between HA and the real device is a slow RS232-to-Modbus-TCP
+    bridge that occasionally times out on connect (see MESSAGE_SPACING_SECONDS
+    in const.py). That must not permanently break the integration until
+    someone manually reloads it.
+    """
+    mock_modbus_connection.connect.side_effect = ModbusTimeoutError(
+        "connect timed out"
+    )
+    mock_config_entry.add_to_hass(hass)
+
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    mock_modbus_connection.close.assert_awaited_once()
 
 
 async def test_setup_entry_creates_entities(

@@ -2,6 +2,8 @@
 
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from modbus_connection import ModbusError
 
 from . import connection as connection_api
 from .aerosmart_modbus import AerosmartDevice
@@ -9,6 +11,7 @@ from .const import (
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
     DEFAULT_PORT,
+    DOMAIN,
     LEGACY_CONF_CONNECTION,
 )
 from .coordinator import AerosmartConfigEntry, AerosmartCoordinator
@@ -29,7 +32,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) ->
     )
     setup_complete = False
     try:
-        await connection.connect()
+        try:
+            await connection.connect()
+        except ModbusError as err:
+            raise ConfigEntryNotReady(
+                translation_domain=DOMAIN,
+                translation_key="connect_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
         unit_ventilation = connection.for_unit(entry.data[CONF_UNIT_VENTILATION])
         unit_heat_pump = connection.for_unit(entry.data[CONF_UNIT_HEAT_PUMP])
         device = AerosmartDevice(unit_ventilation, unit_heat_pump)

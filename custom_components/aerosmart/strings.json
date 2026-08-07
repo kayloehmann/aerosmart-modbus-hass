@@ -467,6 +467,9 @@
     }
   },
   "exceptions": {
+    "connect_failed": {
+      "message": "Failed to connect to aerosmart: {error}"
+    },
     "update_failed": {
       "message": "Error communicating with aerosmart: {error}"
     }
