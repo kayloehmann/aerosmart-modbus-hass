@@ -1,5 +1,9 @@
 # aerosmart for Home Assistant (HACS)
 
+[![Release](https://img.shields.io/github/v/release/kayloehmann/aerosmart-modbus-hass)](https://github.com/kayloehmann/aerosmart-modbus-hass/releases/latest)
+[![Test](https://github.com/kayloehmann/aerosmart-modbus-hass/actions/workflows/test.yml/badge.svg)](https://github.com/kayloehmann/aerosmart-modbus-hass/actions/workflows/test.yml)
+[![Validate](https://github.com/kayloehmann/aerosmart-modbus-hass/actions/workflows/validate.yml/badge.svg)](https://github.com/kayloehmann/aerosmart-modbus-hass/actions/workflows/validate.yml)
+
 A HACS-installable custom integration for the aerosmart ventilation/heat-pump
 unit. It uses Home Assistant 2026.9's official shared Modbus connection API
 and the backend-neutral
@@ -48,12 +52,27 @@ guarantee (see "Known limitations").
 
 ## Prerequisites / installation instructions
 
+Home Assistant **2026.9.0 or newer** is required. The integration uses the
+Modbus connection provided by Home Assistant; no separate `modbus_connection`
+integration, YAML hub, or manually installed Python package is required.
+
 1. Via [HACS](https://hacs.xyz/): add this repository as a custom repository
    (category: Integration), then install "aerosmart" and restart Home
-   Assistant if prompted. Home Assistant 2026.9.0 or newer is required.
+   Assistant if prompted.
 2. Settings -> Devices & services -> Add integration -> "aerosmart", then
    enter the Modbus TCP gateway host and port plus the two station addresses
    (defaults: port 502, unit 1 for ventilation, unit 2 for heat pump).
+
+### Updating from v0.4.x
+
+1. Update Home Assistant to 2026.9.0 or newer.
+2. Update aerosmart to v0.5.0 or newer in HACS.
+3. Restart Home Assistant.
+
+Existing aerosmart configuration entries are retained. The integration now
+hands connection creation, reconnects, sharing, and teardown to Home Assistant.
+The previous private connection module and direct `tmodbus` dependency have
+been removed.
 
 ### Configuration parameters
 
@@ -86,7 +105,10 @@ logs an error once (not on every failed poll) and an info message once
 connectivity recovers.
 
 Requests are serialized across both station addresses with a 300 ms gap. This
-is required by the reference installation's slow serial-to-TCP gateway.
+is required by the reference installation's slow serial-to-TCP gateway. A
+single register value spans at most two Modbus registers; the integration does
+not combine adjacent values into larger reads because the controller rejects
+such requests with Modbus exception code 2.
 
 ## Known limitations
 
@@ -104,17 +126,24 @@ is required by the reference installation's slow serial-to-TCP gateway.
 
 ## Troubleshooting
 
+- **`No module named 'tmodbus'` or `Invalid handler specified`:** update to
+  aerosmart v0.5.0 or newer, verify that Home Assistant 2026.9.0 or newer is
+  installed, and restart Home Assistant. Do not manually install `tmodbus`.
+- **Modbus exception code 2:** the controller rejected an invalid register
+  range. v0.5.0 limits reads to a maximum of two registers. If this still
+  occurs, include the failing address and count from the log in the issue.
 - **Entities go `unavailable` intermittently, or the log shows Modbus
   timeouts/mismatched responses:** if your unit sits behind a slow
   RS232-to-Modbus-TCP gateway (as the reference installation does), sending
   requests back-to-back with no pacing can make the gateway return responses
-  under stale or mismatched transaction IDs. `MESSAGE_SPACING_SECONDS` in
-  `const.py` (currently 0.3s) adds spacing between requests to the
-  two unit handles specifically to work around this; if you still see the
-  issue, try increasing it.
+  under stale or mismatched transaction IDs. v0.5.0 configures a 300 ms message
+  spacing and waits another 300 ms when switching from the ventilation unit to
+  the heat-pump unit.
 - **"Failed to connect" during setup or reconfigure:** check the gateway host,
   port and both station addresses. The config flow reads one component from
-  each unit before creating or updating the entry.
+  each unit before creating or updating the entry. Also ensure that another
+  external Modbus client is not occupying a gateway that accepts only one TCP
+  client at a time.
 - **Something looks wrong with a specific entity's value:** download
   diagnostics (device page -> Download diagnostics) to get every register's
   raw value in one file; useful both for your own debugging and for
@@ -216,6 +245,8 @@ them here. It's not an active target for a `home-assistant/core` submission.
 ## Next steps
 
 - Keep the test suite and `mypy --strict` green in CI.
+- Confirm v0.5.x against additional physical aerosmart installations and
+  gateway models.
 - Add sensor-platform tests (only binary_sensor/number/select/switch/
   coordinator are covered so far).
 - Add icon translations for the rest of the entity set (`icons.json`
