@@ -1,13 +1,12 @@
 """Tests for the aerosmart config flow."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from modbus_connection.mock import MockModbusConnection
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aerosmart.const import (
@@ -16,12 +15,13 @@ from custom_components.aerosmart.const import (
     DOMAIN,
 )
 
+from .conftest import MockModbusApi
+
 
 @pytest.mark.usefixtures("mock_modbus_unit_ventilation", "mock_modbus_unit_heat_pump")
 async def test_full_flow(
     hass: HomeAssistant,
     mock_setup_entry: AsyncMock,
-    mock_modbus_connection: MockModbusConnection,
 ) -> None:
     """A valid connection and both unit IDs create an entry."""
     result = await hass.config_entries.flow.async_init(
@@ -49,15 +49,14 @@ async def test_full_flow(
         CONF_UNIT_VENTILATION: 1,
         CONF_UNIT_HEAT_PUMP: 2,
     }
-    mock_modbus_connection.connect.assert_awaited_once()
     mock_setup_entry.assert_called_once()
 
 
 async def test_cannot_connect(
-    hass: HomeAssistant, mock_connection_factory: MagicMock
+    hass: HomeAssistant, mock_modbus_api: MockModbusApi
 ) -> None:
     """An unreachable unit shows a form error instead of aborting."""
-    mock_connection_factory.side_effect = OSError("unreachable")
+    mock_modbus_api.temporary_unit.side_effect = OSError("unreachable")
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -132,11 +131,11 @@ async def test_reconfigure_success(
 async def test_reconfigure_cannot_connect(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
-    mock_connection_factory: MagicMock,
+    mock_modbus_api: MockModbusApi,
 ) -> None:
     """An unreachable unit during reconfigure shows a form error."""
     mock_config_entry.add_to_hass(hass)
-    mock_connection_factory.side_effect = OSError("unreachable")
+    mock_modbus_api.temporary_unit.side_effect = OSError("unreachable")
 
     result = await mock_config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(

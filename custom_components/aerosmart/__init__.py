@@ -1,18 +1,17 @@
 """The aerosmart integration."""
 
+from homeassistant.components.modbus import async_get_unit
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from modbus_connection import ModbusError
+from modbus_connection import ModbusTcpParams
 
-from . import connection as connection_api
 from .aerosmart_modbus import AerosmartDevice
 from .const import (
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
     DEFAULT_PORT,
-    DOMAIN,
     LEGACY_CONF_CONNECTION,
+    MESSAGE_SPACING_SECONDS,
 )
 from .coordinator import AerosmartConfigEntry, AerosmartCoordinator
 
@@ -27,39 +26,26 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:
     """Set up aerosmart from a config entry."""
-    connection = connection_api.create_tcp_connection(
-        entry.data[CONF_HOST], entry.data[CONF_PORT]
+    params = ModbusTcpParams(host=entry.data[CONF_HOST], port=entry.data[CONF_PORT])
+    unit_ventilation = async_get_unit(
+        hass, entry, params, entry.data[CONF_UNIT_VENTILATION]
     )
-    setup_complete = False
-    try:
-        try:
-            await connection.connect()
-        except ModbusError as err:
-            raise ConfigEntryNotReady(
-                translation_domain=DOMAIN,
-                translation_key="connect_failed",
-                translation_placeholders={"error": str(err)},
-            ) from err
-        unit_ventilation = connection.for_unit(entry.data[CONF_UNIT_VENTILATION])
-        unit_heat_pump = connection.for_unit(entry.data[CONF_UNIT_HEAT_PUMP])
-        device = AerosmartDevice(unit_ventilation, unit_heat_pump)
-        coordinator = AerosmartCoordinator(hass, entry, device, connection)
-        await coordinator.async_config_entry_first_refresh()
-        entry.runtime_data = coordinator
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-        setup_complete = True
-        return True
-    finally:
-        if not setup_complete:
-            await connection.close()
+    unit_heat_pump = async_get_unit(
+        hass, entry, params, entry.data[CONF_UNIT_HEAT_PUMP]
+    )
+    unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
+    unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
+    device = AerosmartDevice(unit_ventilation, unit_heat_pump)
+    coordinator = AerosmartCoordinator(hass, entry, device)
+    await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        await entry.runtime_data.connection.close()
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:

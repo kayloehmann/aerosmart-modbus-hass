@@ -1,11 +1,14 @@
 """Config flow for aerosmart."""
 
+import asyncio
 import logging
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.modbus import async_get_temporary_unit
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
@@ -14,9 +17,8 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from modbus_connection import ModbusConnection, ModbusError
+from modbus_connection import ModbusError, ModbusTcpParams
 
-from . import connection as connection_api
 from .const import (
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
@@ -24,6 +26,7 @@ from .const import (
     DEFAULT_UNIT_HEAT_PUMP,
     DEFAULT_UNIT_VENTILATION,
     DOMAIN,
+    MESSAGE_SPACING_SECONDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 # bug where it strips the required parentheses from a multi-type except
 # clause, producing invalid Python 2-style syntax. Referencing a module-level
 # constant instead sidesteps it.
-_CONNECT_ERRORS = (ModbusError, OSError, ValueError)
+_CONNECT_ERRORS = (ModbusError, HomeAssistantError, OSError, ValueError)
 
 STEP_USER = vol.Schema(
     {
@@ -117,22 +120,24 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_can_connect(self, data: dict[str, Any]) -> bool:
         """Probe both units and always release the temporary connection."""
-        connection: ModbusConnection | None = None
         try:
-            connection = connection_api.create_tcp_connection(
-                data[CONF_HOST], data[CONF_PORT]
-            )
-            await connection.connect()
-            unit_ventilation = connection.for_unit(data[CONF_UNIT_VENTILATION])
-            unit_heat_pump = connection.for_unit(data[CONF_UNIT_HEAT_PUMP])
-            await unit_ventilation.read_holding_registers(1174, 2)
-            await unit_heat_pump.read_holding_registers(1044, 2)
+            params = ModbusTcpParams(host=data[CONF_HOST], port=data[CONF_PORT])
+            async with (
+                async_get_temporary_unit(
+                    self.hass, params, data[CONF_UNIT_VENTILATION]
+                ) as unit_ventilation,
+                async_get_temporary_unit(
+                    self.hass, params, data[CONF_UNIT_HEAT_PUMP]
+                ) as unit_heat_pump,
+            ):
+                unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
+                unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
+                await unit_ventilation.read_holding_registers(1174, 2)
+                await asyncio.sleep(MESSAGE_SPACING_SECONDS)
+                await unit_heat_pump.read_holding_registers(1044, 2)
         except _CONNECT_ERRORS as err:
             _LOGGER.warning("Failed to validate aerosmart connection: %s", err)
             return False
-        finally:
-            if connection is not None:
-                await connection.close()
         return True
 
     @staticmethod

@@ -2,7 +2,7 @@
 asyncio_mode = "auto"
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 warn_unreachable = true
 show_error_codes = true

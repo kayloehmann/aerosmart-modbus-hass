@@ -5,7 +5,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from modbus_connection import ModbusConnection, ModbusError
+from modbus_connection import ModbusError
 
 from .aerosmart_modbus import AerosmartDevice
 from .const import DOMAIN, SCAN_INTERVAL
@@ -27,7 +27,6 @@ class AerosmartCoordinator(DataUpdateCoordinator[AerosmartDevice]):
         hass: HomeAssistant,
         entry: AerosmartConfigEntry,
         device: AerosmartDevice,
-        connection: ModbusConnection,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -38,13 +37,10 @@ class AerosmartCoordinator(DataUpdateCoordinator[AerosmartDevice]):
             update_interval=SCAN_INTERVAL,
         )
         self.device = device
-        self.connection = connection
 
     async def _async_update_data(self) -> AerosmartDevice:
         """Fetch the latest data from both aerosmart units."""
         try:
-            if not self.connection.connected:
-                await self.connection.connect()
             await self.device.async_update()
         except ModbusError as err:
             raise UpdateFailed(

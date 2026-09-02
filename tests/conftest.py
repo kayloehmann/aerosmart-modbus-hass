@@ -1,6 +1,8 @@
 """Fixtures for the aerosmart tests."""
 
 from collections.abc import Generator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,6 +29,15 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
 
 UNIT_VENTILATION = 1
 UNIT_HEAT_PUMP = 2
+
+
+@dataclass
+class MockModbusApi:
+    """Mocks for the persistent and temporary Home Assistant Modbus APIs."""
+
+    get_unit: MagicMock
+    temporary_unit: MagicMock
+
 
 # uint32 fields span 2 registers, big word order: [high_word, low_word].
 VENTILATION_HOLDING: dict[int, list[int]] = {
@@ -72,19 +83,34 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(autouse=True)
-def mock_connection_factory(
+def mock_modbus_api(
     mock_modbus_connection: MockModbusConnection,
-) -> Generator[MagicMock]:
-    """Route every integration-owned connection through the in-memory mock.
+) -> Generator[MockModbusApi]:
+    """Route Home Assistant's shared Modbus API through the in-memory mock."""
+    get_unit = MagicMock(
+        side_effect=lambda _hass, _entry, _params, unit_id: (
+            mock_modbus_connection.for_unit(unit_id)
+        )
+    )
 
-    ``close`` is replaced with a no-op spy so config-entry reload tests can
-    reuse the same in-memory register store while still verifying ownership.
-    """
-    mock_modbus_connection.connect = AsyncMock()  # type: ignore[attr-defined]
-    mock_modbus_connection.close = AsyncMock()  # type: ignore[method-assign]
-    factory = MagicMock(return_value=mock_modbus_connection)
-    with patch("custom_components.aerosmart.connection.create_tcp_connection", factory):
-        yield factory
+    @asynccontextmanager
+    async def temporary_unit(_hass, _params, unit_id):
+        yield mock_modbus_connection.for_unit(unit_id)
+
+    temporary_unit_factory = MagicMock(side_effect=temporary_unit)
+    with (
+        patch("custom_components.aerosmart.async_get_unit", get_unit),
+        patch(
+            "custom_components.aerosmart.config_flow.async_get_temporary_unit",
+            temporary_unit_factory,
+        ),
+        patch("custom_components.aerosmart.config_flow.asyncio.sleep", new=AsyncMock()),
+        patch(
+            "custom_components.aerosmart.aerosmart_modbus.aerosmart.asyncio.sleep",
+            new=AsyncMock(),
+        ),
+    ):
+        yield MockModbusApi(get_unit=get_unit, temporary_unit=temporary_unit_factory)
 
 
 @pytest.fixture
@@ -92,7 +118,7 @@ def mock_config_entry(
     mock_modbus_unit_ventilation: MockModbusUnit,
     mock_modbus_unit_heat_pump: MockModbusUnit,
 ) -> MockConfigEntry:
-    """An aerosmart config entry that owns its TCP connection."""
+    """An aerosmart config entry using Home Assistant's shared connection."""
     return MockConfigEntry(
         domain=DOMAIN,
         title="aerosmart",

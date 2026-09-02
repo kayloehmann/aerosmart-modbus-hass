@@ -1,9 +1,10 @@
 # aerosmart for Home Assistant (HACS)
 
 A HACS-installable custom integration for the aerosmart ventilation/heat-pump
-unit. It owns one Modbus TCP connection and uses the backend-neutral
+unit. It uses Home Assistant 2026.9's official shared Modbus connection API
+and the backend-neutral
 [`modbus-connection`](https://home-assistant-libs.github.io/modbus-connection/)
-library with its `tmodbus` backend. Based on
+library supplied by Home Assistant. Based on
 the [`ludeeus/integration_blueprint`](https://github.com/ludeeus/integration_blueprint)
 template.
 
@@ -49,7 +50,7 @@ guarantee (see "Known limitations").
 
 1. Via [HACS](https://hacs.xyz/): add this repository as a custom repository
    (category: Integration), then install "aerosmart" and restart Home
-   Assistant if prompted.
+   Assistant if prompted. Home Assistant 2026.9.0 or newer is required.
 2. Settings -> Devices & services -> Add integration -> "aerosmart", then
    enter the Modbus TCP gateway host and port plus the two station addresses
    (defaults: port 502, unit 1 for ventilation, unit 2 for heat pump).
@@ -70,8 +71,8 @@ turn out to differ from the defaults.
 ## Removal instructions
 
 Settings -> Devices & services -> aerosmart -> the three-dot menu -> Delete.
-This removes the aerosmart config entry and its entities/device and closes the
-TCP connection owned by that entry.
+This removes the aerosmart config entry and its entities/device. Home Assistant
+releases the shared Modbus connection when its last consumer unloads.
 
 ## How data updates
 
@@ -89,10 +90,9 @@ is required by the reference installation's slow serial-to-TCP gateway.
 
 ## Known limitations
 
-- The integration owns its Modbus TCP connection. Do not configure another
-  integration or client to poll the same serial gateway concurrently unless
-  the gateway explicitly supports multiple independent clients. Competing
-  connections can interleave requests on an RS-485 bus.
+- Home Assistant shares the Modbus TCP connection with other integrations using
+  identical link settings. External clients can still compete with that shared
+  connection unless the gateway supports multiple independent clients.
 - The register map is transcribed from one real installation's existing
   `modbus:` YAML, not an official manufacturer specification. Entity names,
   units, and especially **writability of `number`/`switch`/`select`
@@ -196,18 +196,15 @@ not configuration of it). `strict-typing`: `pyproject.toml` has a `[tool.mypy]`
 `strict = true` config (vendored `aerosmart_modbus` excluded -- separately
 maintained, separately typed, see its own `NOTICE.md`); a manual pass found
 the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
-`_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and all
-22 tests pass in CI. The same suite has also been verified locally against
-Home Assistant 2026.8.0 on Python 3.14.5. Still open: icon translations for
-the rest of the entity set.
+`_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and the
+full test suite pass in CI. The suite is verified against Home Assistant
+2026.9.0 on Python 3.14. Still open: icon translations for the rest of the
+entity set.
 
-The integration no longer imports the withdrawn
-`homeassistant.components.modbus_connection` component. Its tests use the
-published `modbus-connection` package's in-memory backend, so the normal
-released Home Assistant test stack can run them. The test workflow is enabled
-for pushes and pull requests as well as manual dispatches, and covers both
-Python 3.13 and 3.14 so compatibility with the 2026.7 and 2026.8 Home Assistant
-generations remains visible.
+The integration uses `homeassistant.components.modbus.async_get_unit` and
+`async_get_temporary_unit`; Home Assistant owns connection sharing, reconnects,
+and teardown. The test workflow is enabled for pushes and pull requests as well
+as manual dispatches on Python 3.14.
 
 A parallel reference implementation was also built against
 `home-assistant/core`'s conventions (fork:

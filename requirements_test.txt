@@ -1,8 +1,8 @@
--r requirements.txt
-pytest-homeassistant-custom-component
-pytest-asyncio
-# Keep both transport packages explicit, just like manifest.json. Home Assistant
-# checks whether the base distribution is installed without validating extras.
-modbus-connection==3.9.0
-tmodbus==0.5.0
+# This revision supports Home Assistant 2026.9. PyPI's latest stable test
+# helper still targets Home Assistant 2026.2.
+pytest-homeassistant-custom-component @ git+https://github.com/MatthewFlamm/pytest-homeassistant-custom-component.git@1915cdab1fcb1f4f406b9c3e92dab7fee5517e62
+# Home Assistant installs integration dependencies at runtime; tests import the
+# Modbus mock backend before that installer runs.
+modbus-connection[tmodbus]==4.10.0
+tmodbus==0.6.2
 mypy

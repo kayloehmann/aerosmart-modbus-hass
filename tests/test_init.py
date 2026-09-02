@@ -3,15 +3,22 @@
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
-from modbus_connection import ModbusTimeoutError
-from modbus_connection.mock import MockModbusConnection
+from modbus_connection import ModbusConnectionError
+from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from .conftest import MockModbusApi
+
+
+def _raise_connection_error() -> int:
+    """Simulate a failed read during the coordinator's first refresh."""
+    raise ModbusConnectionError("simulated read failure")
 
 
 async def test_setup_entry_retries_on_connect_failure(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
-    mock_modbus_connection: MockModbusConnection,
+    mock_modbus_unit_ventilation: MockModbusUnit,
 ) -> None:
     """A connect failure schedules a retry instead of a permanent setup error.
 
@@ -20,29 +27,26 @@ async def test_setup_entry_retries_on_connect_failure(
     in const.py). That must not permanently break the integration until
     someone manually reloads it.
     """
-    mock_modbus_connection.connect.side_effect = ModbusTimeoutError(
-        "connect timed out"
-    )
+    mock_modbus_unit_ventilation.holding[999_999] = _raise_connection_error
     mock_config_entry.add_to_hass(hass)
 
     assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
-    mock_modbus_connection.close.assert_awaited_once()
 
 
 async def test_setup_entry_creates_entities(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
-    mock_modbus_connection: MockModbusConnection,
+    mock_modbus_api: MockModbusApi,
 ) -> None:
     """The entry loads and produces entities across every platform."""
     mock_config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    mock_modbus_connection.connect.assert_awaited_once()
+    assert mock_modbus_api.get_unit.call_count == 2
 
     wochentag = hass.states.get("sensor.aerosmart_wochentag")
     assert wochentag is not None
@@ -53,19 +57,18 @@ async def test_setup_entry_creates_entities(
     assert outside_temp.state == "0.123"
 
 
-async def test_unload_closes_owned_connection(
+async def test_unload_releases_shared_connection(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
-    mock_modbus_connection: MockModbusConnection,
 ) -> None:
-    """Unloading the entry permanently closes its owned connection."""
+    """Unloading lets Home Assistant release its shared connection holds."""
     mock_config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
     assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
 
-    mock_modbus_connection.close.assert_awaited_once()
+    assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_migrates_legacy_shared_connection_entry(hass: HomeAssistant) -> None:

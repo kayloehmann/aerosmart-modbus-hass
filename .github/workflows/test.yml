@@ -14,14 +14,8 @@ permissions:
 
 jobs:
   pytest:
-    name: "pytest (Python ${{ matrix.python-version }})"
+    name: "pytest (Python 3.14)"
     runs-on: "ubuntu-latest"
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version:
-          - "3.13"
-          - "3.14"
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -29,11 +23,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ matrix.python-version }}"
+          python-version: "3.14"
           cache: "pip"
 
       - name: Install requirements
-        run: python3 -m pip install -r requirements_test.txt
+        run: |
+          python3 -m pip install -r requirements_test.txt
+          # Replace the helper's 2026.9 beta pin with the released HA version.
+          python3 -m pip install -r requirements.txt
 
       - name: Run tests
         run: python3 -m pytest tests --verbose
