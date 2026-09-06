@@ -1,0 +1,12 @@
+when:
+  - event: [push, pull_request, manual]
+
+steps:
+  quality:
+    image: python:3.14-slim
+    commands:
+      - python -m pip install --disable-pip-version-check -r requirements_test.txt
+      - python -m pip install --disable-pip-version-check -r requirements.txt
+      - python -m ruff check .
+      - python -m ruff format --check .
+      - python -m pytest tests --verbose
