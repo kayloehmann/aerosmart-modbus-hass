@@ -29,7 +29,7 @@ jobs:
       - name: Install requirements
         run: |
           python3 -m pip install -r requirements_test.txt
-          # Replace the helper's 2026.9 beta pin with the released HA version.
+          # Keep the test environment on the exact released HA patch version.
           python3 -m pip install -r requirements.txt
 
       - name: Run tests

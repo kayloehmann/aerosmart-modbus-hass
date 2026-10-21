@@ -628,6 +628,22 @@ SENSOR_DESCRIPTIONS: tuple[AerosmartSensorEntityDescription, ...] = (
         translation_key="heat_pump_wp_status",
         component="heat_pump",
         attribute="wp_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[
+            "Wiedereinschaltsperre",
+            "Wärmepumpe aus",
+            "Vorlaufzeit Solepumpe",
+            "Vorlaufzeit Ventilatoren",
+            "Öffnen Heißgasventil",
+            "Öffnen Flüssiggasventil",
+            "Start Kompressor",
+            "Mindestlaufzeit Wärmepumpe",
+            "Wärmepumpe ein",
+            "Kältemittel absaugen",
+            "Beim Abtauen absaugen",
+            "Abtauen ein",
+            "Nach Abtauen abtropfen",
+        ],
     ),
     AerosmartSensorEntityDescription(
         key="heat_pump_wp_status_restlaufzeit",
@@ -705,9 +721,10 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up aerosmart sensors."""
-    coordinator = entry.runtime_data
+    runtime = entry.runtime_data
     async_add_entities(
-        AerosmartSensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
+        AerosmartSensor(runtime.coordinator_for(description.component), description)
+        for description in SENSOR_DESCRIPTIONS
     )
 
 
@@ -717,9 +734,18 @@ class AerosmartSensor(AerosmartEntity, SensorEntity):
     entity_description: AerosmartSensorEntityDescription
 
     @property
-    def native_value(self) -> float | int | None:
+    def native_value(self) -> float | int | str | None:
         """Return the register's current value."""
+        value = getattr(self._subsystem, self.entity_description.attribute)
+        if value is None:
+            return None
+        if self.entity_description.device_class is SensorDeviceClass.ENUM:
+            metadata = self._subsystem.require_metadata_for(
+                self.entity_description.attribute
+            )
+            assert metadata.enum is not None
+            return dict(metadata.enum.options).get(int(value))
         return cast(
-            float | int | None,
-            getattr(self._subsystem, self.entity_description.attribute),
+            float | int,
+            value,
         )

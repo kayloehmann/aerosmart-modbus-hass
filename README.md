@@ -5,7 +5,7 @@
 [![Validate](https://github.com/kayloehmann/aerosmart-modbus-hass/actions/workflows/validate.yml/badge.svg)](https://github.com/kayloehmann/aerosmart-modbus-hass/actions/workflows/validate.yml)
 
 A HACS-installable custom integration for the aerosmart ventilation/heat-pump
-unit. It uses Home Assistant 2026.9's official shared Modbus connection API
+unit. It uses Home Assistant 2026.10's official shared Modbus connection API
 and the backend-neutral
 [`modbus-connection`](https://home-assistant-libs.github.io/modbus-connection/)
 library supplied by Home Assistant. Based on
@@ -52,7 +52,7 @@ guarantee (see "Known limitations").
 
 ## Prerequisites / installation instructions
 
-Home Assistant **2026.9.0 or newer** is required. The integration uses the
+Home Assistant **2026.10.0 or newer** is required. The integration uses the
 Modbus connection provided by Home Assistant; no separate `modbus_connection`
 integration, YAML hub, or manually installed Python package is required.
 
@@ -65,8 +65,8 @@ integration, YAML hub, or manually installed Python package is required.
 
 ### Updating from v0.4.x
 
-1. Update Home Assistant to 2026.9.0 or newer.
-2. Update aerosmart to v0.5.0 or newer in HACS.
+1. Update Home Assistant to 2026.10.0 or newer.
+2. Update aerosmart to v0.6.0 or newer in HACS.
 3. Restart Home Assistant.
 
 Existing aerosmart configuration entries are retained. The integration now
@@ -95,20 +95,23 @@ releases the shared Modbus connection when its last consumer unloads.
 
 ## How data updates
 
-All entities share one `DataUpdateCoordinator` that polls both units every
-30 seconds (`SCAN_INTERVAL` in `const.py`) -- adding or removing entities
-never changes what gets polled, since the coordinator always fans out to
-every sub-system. Each 32-bit datapoint is read separately because real
-aerosmart controllers reject larger combined reads even across adjacent
-addresses. If a poll fails, entities go `unavailable`; Home Assistant
-logs an error once (not on every failed poll) and an info message once
-connectivity recovers.
+Two `DataUpdateCoordinator`s share the same device and Modbus connection.
+Operating values, faults, and the controller clock are polled every 60 seconds;
+filter counters and slow-changing settings are polled every 10 minutes and
+immediately after a write. Enabling or disabling entities does not alter either
+fixed poll plan.
 
-Requests are serialized across both station addresses with a 300 ms gap. This
-is required by the reference installation's slow serial-to-TCP gateway. A
-single register value spans at most two Modbus registers; the integration does
-not combine adjacent values into larger reads because the controller rejects
-such requests with Modbus exception code 2.
+Each 32-bit datapoint is read separately because real aerosmart controllers
+reject larger combined reads even across adjacent addresses. A full operating
+poll is 115 requests and a settings poll is 22 requests. One failed sub-system
+now makes only its own entities unavailable; components that answered retain
+fresh values and availability.
+
+Requests are serialized across both station addresses. The device library asks
+Home Assistant's shared transport for 300 ms of quiet before and after either
+unit's requests plus a one-second delay after reconnecting. Manual sleeps are
+not needed. A single value spans at most two Modbus registers; larger reads are
+still avoided because the controller rejects them with exception code 2.
 
 ## Known limitations
 
@@ -127,18 +130,18 @@ such requests with Modbus exception code 2.
 ## Troubleshooting
 
 - **`No module named 'tmodbus'` or `Invalid handler specified`:** update to
-  aerosmart v0.5.0 or newer, verify that Home Assistant 2026.9.0 or newer is
+  aerosmart v0.6.0 or newer, verify that Home Assistant 2026.10.0 or newer is
   installed, and restart Home Assistant. Do not manually install `tmodbus`.
 - **Modbus exception code 2:** the controller rejected an invalid register
-  range. v0.5.0 limits reads to a maximum of two registers. If this still
+  range. v0.6.0 limits reads to a maximum of two registers. If this still
   occurs, include the failing address and count from the log in the issue.
 - **Entities go `unavailable` intermittently, or the log shows Modbus
   timeouts/mismatched responses:** if your unit sits behind a slow
   RS232-to-Modbus-TCP gateway (as the reference installation does), sending
   requests back-to-back with no pacing can make the gateway return responses
-  under stale or mismatched transaction IDs. v0.5.0 configures a 300 ms message
-  spacing and waits another 300 ms when switching from the ventilation unit to
-  the heat-pump unit.
+  under stale or mismatched transaction IDs. v0.6.0 lets Home Assistant's
+  shared transport enforce 300 ms of quiet before and after requests to either
+  unit and a one-second delay after reconnecting.
 - **"Failed to connect" during setup or reconfigure:** check the gateway host,
   port and both station addresses. The config flow reads one component from
   each unit before creating or updating the entry. Also ensure that another
@@ -227,7 +230,7 @@ maintained, separately typed, see its own `NOTICE.md`); a manual pass found
 the two gaps already fixed (an untyped `**kwargs` in `switch.py`, an untyped
 `_subsystem` property in `entity.py`) and no others. Ruff, strict mypy and the
 full test suite pass in CI. The suite is verified against Home Assistant
-2026.9.0 on Python 3.14. Still open: icon translations for the rest of the
+2026.10.1 on Python 3.14. Still open: icon translations for the rest of the
 entity set.
 
 The integration uses `homeassistant.components.modbus.async_get_unit` and
@@ -245,7 +248,7 @@ them here. It's not an active target for a `home-assistant/core` submission.
 ## Next steps
 
 - Keep the test suite and `mypy --strict` green in CI.
-- Confirm v0.5.x against additional physical aerosmart installations and
+- Confirm v0.6.x against additional physical aerosmart installations and
   gateway models.
 - Add sensor-platform tests (only binary_sensor/number/select/switch/
   coordinator are covered so far).

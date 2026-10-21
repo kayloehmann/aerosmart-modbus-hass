@@ -34,8 +34,19 @@ async def async_get_config_entry_diagnostics(
     ``aerosmart_modbus`` internals, so this stays correct regardless of how
     that library stores field values.
     """
-    coordinator = entry.runtime_data
-    device = coordinator.data
+    runtime = entry.runtime_data
+    device = runtime.device
+
+    def poll_diagnostics(coordinator: Any) -> dict[str, Any]:
+        """Describe a poll which may still be awaiting its first result."""
+        data = coordinator.data
+        return {
+            "last_update_success": (
+                coordinator.last_update_success if data is not None else None
+            ),
+            "updated": sorted(data.updated) if data is not None else [],
+            "failed": sorted(data.failed) if data is not None else [],
+        }
 
     registers: dict[str, Any] = {}
     for description in _ALL_DESCRIPTIONS:
@@ -52,6 +63,13 @@ async def async_get_config_entry_diagnostics(
             },
             _TO_REDACT,
         ),
-        "last_update_success": coordinator.last_update_success,
+        "initial_refresh_completed": (
+            runtime.initial_refresh_task is not None
+            and runtime.initial_refresh_task.done()
+        ),
+        "polls": {
+            "readings": poll_diagnostics(runtime.readings),
+            "settings": poll_diagnostics(runtime.settings),
+        },
         "registers": registers,
     }

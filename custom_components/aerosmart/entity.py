@@ -41,4 +41,14 @@ class AerosmartEntity(CoordinatorEntity[AerosmartCoordinator]):
         for its per-subsystem component classes to attribute-check against.
         """
         description = cast(Any, self.entity_description)
-        return getattr(self.coordinator.data, description.component)
+        return getattr(self.coordinator.device, description.component)
+
+    @property
+    def available(self) -> bool:
+        """Return whether this entity's own subsystem refreshed."""
+        description = cast(Any, self.entity_description)
+        return (
+            super().available
+            and self.coordinator.data is not None
+            and description.component in self.coordinator.data.updated
+        )

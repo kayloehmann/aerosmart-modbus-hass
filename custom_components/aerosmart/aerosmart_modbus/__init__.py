@@ -1,5 +1,4 @@
-"""
-aerosmart_modbus -- a typed Modbus device model for aerosmart units.
+"""aerosmart_modbus -- a typed Modbus device model for aerosmart units.
 
 Backend-neutral: built on ``modbus_connection.model``, so it runs over
 pymodbus, tmodbus, or the in-memory mock. Consumed by a Home Assistant

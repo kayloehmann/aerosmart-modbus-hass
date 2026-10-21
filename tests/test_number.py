@@ -21,6 +21,7 @@ async def test_set_native_value_writes_and_refreshes(
     mock_config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
+    await mock_config_entry.runtime_data.async_wait_initial_refresh()
 
     unique_id = f"{mock_config_entry.entry_id}_{KEY}"
     entity_id = entity_registry.async_get_entity_id("number", "aerosmart", unique_id)
@@ -30,6 +31,7 @@ async def test_set_native_value_writes_and_refreshes(
     await hass.async_block_till_done()
     assert await hass.config_entries.async_reload(mock_config_entry.entry_id)
     await hass.async_block_till_done()
+    await mock_config_entry.runtime_data.async_wait_initial_refresh()
 
     await hass.services.async_call(
         "number",

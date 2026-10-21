@@ -158,9 +158,10 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up aerosmart numbers."""
-    coordinator = entry.runtime_data
+    runtime = entry.runtime_data
     async_add_entities(
-        AerosmartNumber(coordinator, description) for description in NUMBER_DESCRIPTIONS
+        AerosmartNumber(runtime.coordinator_for(description.component), description)
+        for description in NUMBER_DESCRIPTIONS
     )
 
 

@@ -7,6 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aerosmart.const import (
@@ -22,6 +23,8 @@ from .conftest import MockModbusApi
 async def test_full_flow(
     hass: HomeAssistant,
     mock_setup_entry: AsyncMock,
+    mock_modbus_unit_ventilation: MockModbusUnit,
+    mock_modbus_unit_heat_pump: MockModbusUnit,
 ) -> None:
     """A valid connection and both unit IDs create an entry."""
     result = await hass.config_entries.flow.async_init(
@@ -50,6 +53,10 @@ async def test_full_flow(
         CONF_UNIT_HEAT_PUMP: 2,
     }
     mock_setup_entry.assert_called_once()
+    assert mock_modbus_unit_ventilation.message_spacing == 0.3
+    assert mock_modbus_unit_heat_pump.message_spacing == 0.3
+    assert mock_modbus_unit_ventilation.required_connect_delay == 1.0
+    assert mock_modbus_unit_heat_pump.required_connect_delay == 1.0
 
 
 async def test_cannot_connect(

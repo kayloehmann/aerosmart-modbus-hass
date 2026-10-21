@@ -1,10 +1,9 @@
 """Config flow for aerosmart."""
 
-import asyncio
 import logging
 from typing import Any
 
-import voluptuous as vol
+import probatio
 from homeassistant.components.modbus import async_get_temporary_unit
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
@@ -19,6 +18,7 @@ from homeassistant.helpers.selector import (
 )
 from modbus_connection import ModbusError, ModbusTcpParams
 
+from .aerosmart_modbus import AerosmartDevice
 from .const import (
     CONF_UNIT_HEAT_PUMP,
     CONF_UNIT_VENTILATION,
@@ -26,7 +26,6 @@ from .const import (
     DEFAULT_UNIT_HEAT_PUMP,
     DEFAULT_UNIT_VENTILATION,
     DOMAIN,
-    MESSAGE_SPACING_SECONDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,20 +36,20 @@ _LOGGER = logging.getLogger(__name__)
 # constant instead sidesteps it.
 _CONNECT_ERRORS = (ModbusError, HomeAssistantError, OSError, ValueError)
 
-STEP_USER = vol.Schema(
+STEP_USER = probatio.Schema(
     {
-        vol.Required(CONF_HOST): TextSelector(
+        probatio.Required(CONF_HOST): TextSelector(
             TextSelectorConfig(type=TextSelectorType.TEXT)
         ),
-        vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
+        probatio.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
             NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
         ),
-        vol.Required(
+        probatio.Required(
             CONF_UNIT_VENTILATION, default=DEFAULT_UNIT_VENTILATION
         ): NumberSelector(
             NumberSelectorConfig(min=1, max=247, step=1, mode=NumberSelectorMode.BOX)
         ),
-        vol.Required(
+        probatio.Required(
             CONF_UNIT_HEAT_PUMP, default=DEFAULT_UNIT_HEAT_PUMP
         ): NumberSelector(
             NumberSelectorConfig(min=1, max=247, step=1, mode=NumberSelectorMode.BOX)
@@ -130,10 +129,8 @@ class AerosmartConfigFlow(ConfigFlow, domain=DOMAIN):
                     self.hass, params, data[CONF_UNIT_HEAT_PUMP]
                 ) as unit_heat_pump,
             ):
-                unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
-                unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
+                AerosmartDevice.configure_units(unit_ventilation, unit_heat_pump)
                 await unit_ventilation.read_holding_registers(1174, 2)
-                await asyncio.sleep(MESSAGE_SPACING_SECONDS)
                 await unit_heat_pump.read_holding_registers(1044, 2)
         except _CONNECT_ERRORS as err:
             _LOGGER.warning("Failed to validate aerosmart connection: %s", err)

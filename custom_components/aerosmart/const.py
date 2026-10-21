@@ -20,12 +20,12 @@ DEFAULT_PORT: Final = 502
 DEFAULT_UNIT_VENTILATION: Final = 1
 DEFAULT_UNIT_HEAT_PUMP: Final = 2
 
-# A ventilation/heat-pump controller changes slowly; poll conservatively.
-SCAN_INTERVAL: Final = timedelta(seconds=30)
+# One 32-bit datapoint per request and the device library's required 300ms line
+# quiet time put the operating-data poll above 30 seconds. Keep enough headroom
+# that the shared gateway is idle between polls.
+READINGS_SCAN_INTERVAL: Final = timedelta(seconds=60)
 
-# The real unit sits behind a slow RS232-to-Modbus-TCP gateway: back-to-back
-# requests with no pacing at all made it return responses under stale/mismatched
-# transaction IDs (live-tested against the real hardware). 300ms between
-# requests eliminated that entirely; unset (0) leaves pacing to pymodbus, which
-# is not enough for this gateway.
-MESSAGE_SPACING_SECONDS: Final = 0.3
+# Filter counters and user settings change slowly. Writes refresh this
+# coordinator immediately, so external changes are the only reason to poll it
+# periodically.
+SETTINGS_SCAN_INTERVAL: Final = timedelta(minutes=10)

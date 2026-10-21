@@ -11,9 +11,14 @@ from .const import (
     CONF_UNIT_VENTILATION,
     DEFAULT_PORT,
     LEGACY_CONF_CONNECTION,
-    MESSAGE_SPACING_SECONDS,
+    READINGS_SCAN_INTERVAL,
+    SETTINGS_SCAN_INTERVAL,
 )
-from .coordinator import AerosmartConfigEntry, AerosmartCoordinator
+from .coordinator import (
+    AerosmartConfigEntry,
+    AerosmartCoordinator,
+    AerosmartRuntimeData,
+)
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -22,6 +27,12 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
     Platform.SELECT,
 ]
+
+
+async def _async_initial_refresh(runtime: AerosmartRuntimeData) -> None:
+    """Populate entities without blocking Home Assistant startup."""
+    await runtime.readings.async_refresh()
+    await runtime.settings.async_refresh()
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) -> bool:
@@ -33,13 +44,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: AerosmartConfigEntry) ->
     unit_heat_pump = async_get_unit(
         hass, entry, params, entry.data[CONF_UNIT_HEAT_PUMP]
     )
-    unit_ventilation.set_message_spacing(MESSAGE_SPACING_SECONDS)
-    unit_heat_pump.set_message_spacing(MESSAGE_SPACING_SECONDS)
     device = AerosmartDevice(unit_ventilation, unit_heat_pump)
-    coordinator = AerosmartCoordinator(hass, entry, device)
-    await coordinator.async_config_entry_first_refresh()
-    entry.runtime_data = coordinator
+    readings = AerosmartCoordinator(
+        hass,
+        entry,
+        device,
+        device.async_update_readings,
+        READINGS_SCAN_INTERVAL,
+        "readings",
+    )
+    settings = AerosmartCoordinator(
+        hass,
+        entry,
+        device,
+        device.async_update_settings,
+        SETTINGS_SCAN_INTERVAL,
+        "settings",
+    )
+    runtime = AerosmartRuntimeData(device, readings, settings)
+    entry.runtime_data = runtime
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    runtime.initial_refresh_task = entry.async_create_background_task(
+        hass,
+        _async_initial_refresh(runtime),
+        f"{entry.domain} initial refresh",
+    )
     return True
 
 

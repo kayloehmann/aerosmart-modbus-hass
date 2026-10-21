@@ -46,6 +46,7 @@ VENTILATION_HOLDING: dict[int, list[int]] = {
 }
 HEAT_PUMP_HOLDING: dict[int, list[int]] = {
     1044: [0, 1],  # heat_pump.waermepumpe
+    1314: [0, 1],  # heat_pump.wp_status: Wärmepumpe aus
     212: [0, 45000],  # hot_water_heat_pump.warmwasser_speicher_oben (-> 45.0)
 }
 
@@ -103,11 +104,6 @@ def mock_modbus_api(
         patch(
             "custom_components.aerosmart.config_flow.async_get_temporary_unit",
             temporary_unit_factory,
-        ),
-        patch("custom_components.aerosmart.config_flow.asyncio.sleep", new=AsyncMock()),
-        patch(
-            "custom_components.aerosmart.aerosmart_modbus.aerosmart.asyncio.sleep",
-            new=AsyncMock(),
         ),
     ):
         yield MockModbusApi(get_unit=get_unit, temporary_unit=temporary_unit_factory)

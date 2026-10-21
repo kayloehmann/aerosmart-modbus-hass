@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 
 from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -370,9 +370,11 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up aerosmart binary sensors."""
-    coordinator = entry.runtime_data
+    runtime = entry.runtime_data
     async_add_entities(
-        AerosmartBinarySensor(coordinator, description)
+        AerosmartBinarySensor(
+            runtime.coordinator_for(description.component), description
+        )
         for description in BINARY_SENSOR_DESCRIPTIONS
     )
 

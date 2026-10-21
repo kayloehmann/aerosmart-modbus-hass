@@ -1,51 +1,103 @@
 """DataUpdateCoordinator for aerosmart."""
 
+import asyncio
 import logging
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from modbus_connection import ModbusError
+from modbus_connection.model import UpdateReport
 
 from .aerosmart_modbus import AerosmartDevice
-from .const import DOMAIN, SCAN_INTERVAL
+from .aerosmart_modbus.aerosmart import SETTINGS_COMPONENTS
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-type AerosmartConfigEntry = ConfigEntry[AerosmartCoordinator]
+type AerosmartConfigEntry = ConfigEntry[AerosmartRuntimeData]
 
 
-class AerosmartCoordinator(DataUpdateCoordinator[AerosmartDevice]):
-    """Refreshes both aerosmart units on a schedule.
-
-    ``AerosmartDevice.async_update`` fans out to each unit's pooled component
-    group, so adding/removing entities never changes what is polled.
-    """
+class AerosmartCoordinator(DataUpdateCoordinator[UpdateReport]):
+    """Refresh one category of aerosmart components on its own schedule."""
 
     def __init__(
         self,
         hass: HomeAssistant,
         entry: AerosmartConfigEntry,
         device: AerosmartDevice,
+        poll: Callable[[], Awaitable[UpdateReport]],
+        interval: timedelta,
+        label: str,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=f"{entry.title} {label}",
             config_entry=entry,
-            update_interval=SCAN_INTERVAL,
+            update_interval=interval,
         )
         self.device = device
+        self._poll = poll
+        self._failed: frozenset[str] = frozenset()
 
-    async def _async_update_data(self) -> AerosmartDevice:
-        """Fetch the latest data from both aerosmart units."""
+    async def _async_update_data(self) -> UpdateReport:
+        """Fetch one poll category and retain partial successes."""
         try:
-            await self.device.async_update()
+            report = await self._poll()
         except ModbusError as err:
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="update_failed",
                 translation_placeholders={"error": str(err)},
             ) from err
-        return self.device
+        if not report.updated:
+            errors = list(report.failed.values())
+            failure = UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+                translation_placeholders={
+                    "error": str(errors[0]) if errors else "no subsystem answered"
+                },
+            )
+            if not errors:
+                raise failure
+            raise failure from ExceptionGroup(
+                "every aerosmart subsystem failed", errors
+            )
+
+        for name in sorted(report.failed.keys() - self._failed):
+            _LOGGER.warning(
+                "%s failed to refresh and is keeping its previous values: %s",
+                name,
+                report.failed[name],
+            )
+        for name in sorted(report.updated & self._failed):
+            _LOGGER.info("%s is available again", name)
+        self._failed = frozenset(report.failed)
+        return report
+
+
+@dataclass
+class AerosmartRuntimeData:
+    """The device and its two polling coordinators."""
+
+    device: AerosmartDevice
+    readings: AerosmartCoordinator
+    settings: AerosmartCoordinator
+    initial_refresh_task: asyncio.Task[None] | None = None
+
+    async def async_wait_initial_refresh(self) -> None:
+        """Wait for the background initial refresh, when a caller needs data."""
+        if self.initial_refresh_task is not None:
+            await self.initial_refresh_task
+
+    def coordinator_for(self, component: str) -> AerosmartCoordinator:
+        """Return the coordinator responsible for a component."""
+        if component in SETTINGS_COMPONENTS:
+            return self.settings
+        return self.readings
