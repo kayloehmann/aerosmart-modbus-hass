@@ -10,7 +10,7 @@ not from the register key.
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 # general.relaykontakt_ext_lu, a plain (non-coil) holding register --
 # is_on treats any non-zero value as True (see AerosmartBinarySensor).

@@ -8,7 +8,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.aerosmart.const import (
     CONF_UNIT_HEAT_PUMP,
