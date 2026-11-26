@@ -7,7 +7,7 @@ reloading before a state exists to act on.
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 KEY = "boost_functions_ventilation_zeitspanne_function_heizung_plus"
 

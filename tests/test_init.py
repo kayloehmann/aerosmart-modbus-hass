@@ -8,7 +8,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from modbus_connection import ModbusConnectionError
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from .conftest import MockModbusApi
 

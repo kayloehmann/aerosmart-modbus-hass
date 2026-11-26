@@ -5,7 +5,7 @@ from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from modbus_connection import IllegalDataAddressError, ModbusConnectionError
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 
 async def test_update_failed_marks_entities_unavailable(

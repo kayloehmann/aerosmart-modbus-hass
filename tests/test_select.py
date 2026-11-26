@@ -10,7 +10,7 @@ Modbus documentation.
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 KEY = "ventilation_betriebsart"
 BETRIEBSART_ADDRESS = 5002
