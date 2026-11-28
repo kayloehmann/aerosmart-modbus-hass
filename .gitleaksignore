@@ -1,0 +1,21 @@
+# Exact historical generic-api-key matches for Home Assistant entity and translation keys.
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/binary_sensor.py:generic-api-key:165
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/binary_sensor.py:generic-api-key:249
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/number.py:generic-api-key:63
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/number.py:generic-api-key:73
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/sensor.py:generic-api-key:323
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/sensor.py:generic-api-key:332
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/sensor.py:generic-api-key:341
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/sensor.py:generic-api-key:350
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/sensor.py:generic-api-key:359
+2527db1ae5a3792695d56de891f46b0f00d24e81:custom_components/aerosmart/sensor.py:generic-api-key:368
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/binary_sensor.py:generic-api-key:153
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/binary_sensor.py:generic-api-key:231
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/number.py:generic-api-key:56
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/number.py:generic-api-key:64
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/sensor.py:generic-api-key:315
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/sensor.py:generic-api-key:324
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/sensor.py:generic-api-key:333
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/sensor.py:generic-api-key:342
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/sensor.py:generic-api-key:351
+e5a8cd67ac8d2d2186e9239dc20f53c14ee67360:custom_components/aerosmart/sensor.py:generic-api-key:360
